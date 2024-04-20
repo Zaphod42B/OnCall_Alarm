@@ -4,21 +4,45 @@
 #include <XPT2046_Touchscreen.h>
 #include <Audio.h>
 #include <WiFi.h>
+#include <ArduinoJson.h>
+
+#include "SDCard.h"
 
 // Initialize Display
 TFT_eSPI tft = TFT_eSPI();
 
+// Initialize Touch
+#define XPT2046_IRQ 36
+#define XPT2046_MOSI 32
+#define XPT2046_MISO 39
+#define XPT2046_CLK 25
+#define XPT2046_CS 33
+
+SPIClass touchSpi = SPIClass(VSPI);
+XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
+
 // Initialize Audio
 Audio audio(true, I2S_DAC_CHANNEL_LEFT_EN);
 
-// Initialize WiFi
-const char* ssid     = "Titanic Syncing"; // Change this to your WiFi SSID
-const char* password = "emergencybroadcastsystem42"; // Change this to your WiFi password
+// Initialize Config
+struct Config
+{
+  char wifi_SSID[32];
+  char wifi_PW[32];
+};
+
+const char *filename = "/config.json";
+Config config;
 
 void setup()
 {
   bool succeeded;
   Serial.begin(115200);
+
+  // Start the SPI for the touch screen and init the TS library
+  touchSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
+  ts.begin(touchSpi);
+  ts.setRotation(1);
 
   // Start the TFT display and set it to black
   tft.init();
@@ -30,10 +54,29 @@ void setup()
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString("Title", 0, 10, 1);
 
+  initialize_SDCard();
+
+  // Load config
+  File file = SD.open(filename, "r");
+  if (!file)
+  {
+    Serial.println("Failed to open file for reading");
+  }
+  else
+  {
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, file);
+    if (error)
+      Serial.println(F("Can't read config from file"));
+
+    strlcpy(config.wifi_SSID, doc["wifi_SSID"], sizeof(config.wifi_SSID));
+    strlcpy(config.wifi_PW, doc["wifi_PW"], sizeof(config.wifi_PW));
+  }
+
   // Connect to WiFi
-  WiFi.begin(ssid, password);
+  WiFi.begin(config.wifi_SSID, config.wifi_PW);
   Serial.print("Connecting to ");
-  Serial.println(ssid);
+  Serial.println(config.wifi_SSID);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
@@ -45,44 +88,26 @@ void setup()
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  // Setup audio and
+  // Setup audio
   audio.forceMono(true);
-  audio.setVolume(10);
+  audio.setVolume(5);
+  audio.setTone(0, 0, 0);
+
+  /*
   do
   {
     // Connect to 'FM - Disco Ball 70's-80's Los Angeles'
-    succeeded = audio.connecttohost("http://sc8.1.fm:8100/;");
+    succeeded = audio.connecttohost("https://edge51.streamonkey.net/radio886-newrock/stream/mp3?aggregator=886Website;");
     delay(500);
     Serial.println("Retrying");
   } while (!succeeded);
+  */
 }
 
 void loop()
 {
   // Prcoess audio
   audio.loop();
-}
-
-void printTitle(const char *info)
-{
-  tft.fillRect(0, 20, 320, 200, TFT_BLACK);
-  tft.setCursor(0, 20, 4);
-  tft.setTextColor(TFT_SKYBLUE);
-  tft.println(info);
-}
-
-void printInfo(const char *info)
-{
-  tft.fillRect(0, 230, 320, 10, TFT_BLACK);
-  tft.setTextColor(TFT_WHITE);
-  tft.drawString(info, 0, 230, 1);
-}
-
-void audio_info(const char *info)
-{
-  Serial.print("info        ");
-  Serial.println(info);
-  printInfo(info);
 }
 
 void audio_id3data(const char *info)
@@ -101,13 +126,6 @@ void audio_showstation(const char *info)
 {
   Serial.print("station     ");
   Serial.println(info);
-}
-
-void audio_showstreamtitle(const char *info)
-{
-  Serial.print("streamtitle ");
-  Serial.println(info);
-  printTitle(info);
 }
 
 void audio_bitrate(const char *info)
