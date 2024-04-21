@@ -1,5 +1,7 @@
 #include <TFT_eSPI.h>
 
+#include "Main.h"
+#include "Extern.h"
 #include "Display.h"
 #include "Free_Fonts.h"
 
@@ -81,26 +83,31 @@ void display_drawMainButtons()
 {
     tft.setTextColor(TFT_BLACK, TFT_DARKGREY, true);
     tft.setTextDatum(MC_DATUM);
-    tft.setFreeFont(FSSB18);
 
     // Left
+    tft.setFreeFont(FSSB18);
     tft.fillRect(0, HEIGHT - 39, 49, 39, TFT_DARKGREY);
     tft.fillRect(51, HEIGHT - 39, 49, 39, TFT_DARKGREY);
     tft.drawString("-", 24, HEIGHT - 25, GFXFF);
     tft.drawString("+", 74, HEIGHT - 25, GFXFF);
 
-    tft.setFreeFont(FSSB9);
-
     // Right
+    tft.setFreeFont(FSSB9);
     tft.fillRect(WIDTH - 100, HEIGHT - 39, 100, 39, TFT_DARKGREY);
     tft.drawString("MENU", WIDTH - 49, HEIGHT - 21, GFXFF);
 
-    tft.setTextColor(TFT_BLACK, TFT_DARKGREEN, true);
-
     // Middle
-    tft.fillRect(102, HEIGHT - 39, 116, 39, TFT_DARKGREEN);
-    tft.drawString("DISARMED", WIDTH / 2, HEIGHT - 21, GFXFF);
-
+    tft.setTextColor(TFT_BLACK);
+    if (config.is_Armed == 1)
+    {
+        tft.fillRect(102, HEIGHT - 39, 116, 39, TFT_RED);
+        tft.drawString("ARMED", WIDTH / 2, HEIGHT - 21, GFXFF);
+    }
+    else
+    {
+        tft.fillRect(102, HEIGHT - 39, 116, 39, TFT_DARKGREEN);
+        tft.drawString("DISARMED", WIDTH / 2, HEIGHT - 21, GFXFF);
+    }
     tft.drawFastVLine(0, HEIGHT - 39, 39, TFT_WHITE);
     tft.drawFastVLine(WIDTH - 1, HEIGHT - 39, 39, TFT_WHITE);
     tft.drawFastVLine(100, HEIGHT - 39, 39, TFT_BLACK);
@@ -111,7 +118,7 @@ void display_drawMainButtons()
     tft.drawFastHLine(0, HEIGHT - 1, WIDTH, TFT_WHITE);
 }
 
-void display_drawMainVolume(int volume)
+void display_drawMainVolume()
 {
     tft.setTextColor(TFT_WHITE);
     tft.setTextDatum(MC_DATUM);
@@ -122,9 +129,9 @@ void display_drawMainVolume(int volume)
 
     tft.fillRect(1, 26, 24, 174, TFT_BLACK);
 
-    if (volume > 0)
+    if (config.audio_Volume > 0)
     {
-        int volHeight = 26 + ((10 - volume) * (175 / 10));
+        int volHeight = 26 + ((10 - config.audio_Volume) * (175 / 10));
         tft.fillRect(1, volHeight, 24, 200 - volHeight, TFT_DARKGREY);
         tft.drawRect(1, volHeight, 24, 200 - volHeight, TFT_BLACK);
     }

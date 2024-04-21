@@ -2,41 +2,24 @@
 #include <SPI.h>
 #include <Audio.h>
 #include <WiFi.h>
-#include <ArduinoJson.h>
-#include <XPT2046_Touchscreen.h>
 
+#include "Main.h"
+#include "Extern.h"
 #include "SDCard.h"
 #include "Display.h"
+#include "Touch.h"
 
 bool menu_change = true;
 bool volume_change = true;
+bool button_change = true;
 int page = 0;
 
 // Timer
 u_long oldTime_display_drawWiFi = 5000;
 
-// Initialize Touch
-#define XPT2046_IRQ 36
-#define XPT2046_MOSI 32
-#define XPT2046_MISO 39
-#define XPT2046_CLK 25
-#define XPT2046_CS 33
-
-SPIClass touchSpi = SPIClass(VSPI);
-XPT2046_Touchscreen ts(XPT2046_CS, XPT2046_IRQ);
-
 // Initialize Audio
 Audio audio(true, I2S_DAC_CHANNEL_LEFT_EN);
 
-// Initialize Config
-struct Config
-{
-  char wifi_SSID[32];
-  char wifi_PW[32];
-  int audio_Volume;
-};
-
-const char *filename = "/config.json";
 Config config;
 
 void setup()
@@ -44,34 +27,11 @@ void setup()
   bool succeeded;
   Serial.begin(115200);
 
+  digitalWrite(33, HIGH);
   sdcard_initialize();
+  sdcard_loadConfig();
 
-  // Load config
-  File file = SD.open(filename, "r");
-  if (!file)
-  {
-    Serial.println("Failed to open file for reading");
-  }
-  else
-  {
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, file);
-    if (error)
-      Serial.println(F("Can't read config from file"));
-
-    // Get Wifi Settings
-    strlcpy(config.wifi_SSID, doc["wifi_SSID"], sizeof(config.wifi_SSID));
-    strlcpy(config.wifi_PW, doc["wifi_PW"], sizeof(config.wifi_PW));
-
-    // Get Audio Settings
-    config.audio_Volume = doc["audio_Volume"];
-  }
-
-  // Initialize Touch Screen
-  touchSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
-  ts.begin(touchSpi);
-  ts.setRotation(1);
-
+  touch_initialize();
   display_initialize();
 
   // Connect to WiFi
@@ -99,17 +59,7 @@ void loop()
   // Prcoess audio
   // audio.loop();
 
-  if (ts.touched())
-  {
-    TS_Point p = ts.getPoint();
-    Serial.print("Pressure = ");
-    Serial.print(p.z);
-    Serial.print(", x = ");
-    Serial.print(p.x);
-    Serial.print(", y = ");
-    Serial.print(p.y);
-    Serial.println();
-  }
+  touch_newPoint();
 
   if (millis() - oldTime_display_drawWiFi >= 5000)
   {
@@ -127,10 +77,16 @@ void loop()
       menu_change = false;
     }
 
-    if  (volume_change)
+    if (volume_change)
     {
-      display_drawMainVolume(config.audio_Volume);
+      display_drawMainVolume();
       volume_change = false;
+    }
+
+    if (button_change)
+    {
+      display_drawMainButtons();
+      button_change = false;
     }
     break;
 
