@@ -20,6 +20,7 @@
 #define TOUCH_Y_MAX 3850
 
 bool is_touched = false;
+long touch_timer;
 int touch_x = 0;
 int touch_y = 0;
 
@@ -38,21 +39,15 @@ void touch_newPoint()
 {
     if (ts.touched())
     {
-        if (!is_touched)
+        if (!is_touched || millis() - touch_timer >= 500)
         {
+            touch_timer = millis();
             TS_Point p = ts.getPoint();
-            Serial.print("Raw: Pressure = ");
-            Serial.print(p.z);
-            Serial.print(", x = ");
-            Serial.print(p.x);
-            Serial.print(", y = ");
-            Serial.print(p.y);
-            Serial.println();
 
             touch_x = (p.x - TOUCH_X_MIN) * (340 - 0) / (TOUCH_X_MAX - TOUCH_X_MIN);
             touch_y = (p.y - TOUCH_Y_MIN) * (240 - 0) / (TOUCH_Y_MAX - TOUCH_Y_MIN);
 
-            Serial.print("Out: Pressure = ");
+            Serial.print("Pressure = ");
             Serial.print(p.z);
             Serial.print(", x = ");
             Serial.print(touch_x);
