@@ -5,6 +5,8 @@
 #include "Display.h"
 #include "Helper.h"
 
+#include "Helper.h"
+
 #include "Free_Fonts.h"
 
 TFT_eSPI tft = TFT_eSPI();
