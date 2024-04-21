@@ -4,6 +4,7 @@
 #include <TFT_eSPI.h>
 
 extern TFT_eSPI tft;
+extern TFT_eSprite sprite;
 
 void display_initialize();
 void display_clearScreen();

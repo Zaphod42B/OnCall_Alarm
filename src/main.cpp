@@ -16,10 +16,15 @@ bool button_change = true;
 int page = 0;
 
 // Timer
-u_long oldTime_display_drawWiFi = 5000;
+#define TIMER_DRAW_WIFI 5000
+u_long oldTime_display_drawWiFi = 0;
+
+#define TIMER_TIME_UPDATE 600000
+u_long oldTime_time_update = 0;
 
 // Initialize Audio
 Audio audio(true, I2S_DAC_CHANNEL_LEFT_EN);
+
 
 Config config;
 
@@ -46,16 +51,25 @@ void setup()
 void loop()
 {
   // Prcoess audio
-  // audio.loop();
+  //audio.loop();
 
   touch_newPoint();
 
-  if (millis() - oldTime_display_drawWiFi >= 5000)
+  // Update Time from NTP every 60 minutes 
+  if (millis() - oldTime_time_update >= TIMER_TIME_UPDATE)
+  {
+    time_update();
+    oldTime_time_update = millis();
+  }
+
+  // Draw WiFi and Time every 5 seconds
+  if (millis() - oldTime_display_drawWiFi >= TIMER_DRAW_WIFI)
   {
     display_drawWiFi(WiFi.RSSI(), WiFi.SSID().c_str());
     display_drawTime();
     oldTime_display_drawWiFi = millis();
   }
+
   switch (page)
   {
   case 0:

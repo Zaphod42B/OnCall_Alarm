@@ -10,6 +10,7 @@
 #include "Free_Fonts.h"
 
 TFT_eSPI tft = TFT_eSPI();
+TFT_eSprite sprite = TFT_eSprite(&tft);
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -156,9 +157,18 @@ void display_drawTime(){
     char time_string[6];
     char date_string[35];
     strftime(time_string, 6, "%H:%M", &timeinfo);
-    strftime(date_string, 255, "%d. %B %Y", &timeinfo);
+    strftime(date_string, 255, "%d. %b. %Y", &timeinfo);
 
     tft.setTextFont(1);
-    tft.drawString(time_string, 320, 4, 2);
-    tft.drawString(date_string, 320, 30, 2);
+    tft.drawString(date_string, 318, 4, 2);
+
+    sprite.setColorDepth(8);
+    sprite.createSprite(60, 20);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TR_DATUM);
+    sprite.setFreeFont(FSSB12);
+    sprite.drawString(time_string, 60, 0, GFXFF);
+    sprite.pushSprite(258, 30);
+    sprite.deleteSprite();
 }
