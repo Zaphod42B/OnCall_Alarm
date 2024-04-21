@@ -3,6 +3,8 @@
 #include "Main.h"
 #include "Extern.h"
 #include "Display.h"
+#include "Helper.h"
+
 #include "Free_Fonts.h"
 
 TFT_eSPI tft = TFT_eSPI();
@@ -138,4 +140,23 @@ void display_drawMainVolume()
 
     tft.drawCentreString("10", 11, 30, GFXFF);
     tft.drawCentreString("0", 12, HEIGHT - 60, GFXFF);
+}
+
+void display_drawTime(){
+
+    struct tm timeinfo;
+
+    getLocalTime(&timeinfo);
+
+    tft.setTextColor(TFT_WHITE, TFT_BLACK, true);
+    tft.setTextDatum(TR_DATUM);
+
+    char time_string[6];
+    char date_string[35];
+    strftime(time_string, 6, "%H:%M", &timeinfo);
+    strftime(date_string, 255, "%d. %B %Y", &timeinfo);
+
+    tft.setTextFont(1);
+    tft.drawString(time_string, 320, 4, 2);
+    tft.drawString(date_string, 320, 30, 2);
 }

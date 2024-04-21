@@ -11,5 +11,6 @@ void display_drawWiFi(int RSSI, const char *wifiName);
 void display_drawMainFrame();
 void display_drawMainButtons();
 void display_drawMainVolume();
+void display_drawTime();
 
 #endif

@@ -39,7 +39,7 @@ void touch_newPoint()
 {
     if (ts.touched())
     {
-        if (!is_touched || millis() - touch_timer >= 500)
+        if (!is_touched || millis() - touch_timer >= 250)
         {
             touch_timer = millis();
             TS_Point p = ts.getPoint();

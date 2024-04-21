@@ -8,6 +8,7 @@
 #include "SDCard.h"
 #include "Display.h"
 #include "Touch.h"
+#include "Helper.h"
 
 bool menu_change = true;
 bool volume_change = true;
@@ -34,20 +35,8 @@ void setup()
   touch_initialize();
   display_initialize();
 
-  // Connect to WiFi
-  WiFi.begin(config.wifi_SSID, config.wifi_PW);
-  Serial.print("Connecting to ");
-  Serial.println(config.wifi_SSID);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  wifi_connect();
+  time_update();
 
   // Setup audio
   audio.forceMono(true);
@@ -64,6 +53,7 @@ void loop()
   if (millis() - oldTime_display_drawWiFi >= 5000)
   {
     display_drawWiFi(WiFi.RSSI(), WiFi.SSID().c_str());
+    display_drawTime();
     oldTime_display_drawWiFi = millis();
   }
   switch (page)
