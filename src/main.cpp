@@ -1,15 +1,19 @@
 #include <Arduino.h>
 #include <SPI.h>
-#include <TFT_eSPI.h>
-#include <XPT2046_Touchscreen.h>
 #include <Audio.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include <XPT2046_Touchscreen.h>
 
 #include "SDCard.h"
+#include "Display.h"
 
-// Initialize Display
-TFT_eSPI tft = TFT_eSPI();
+bool menu_change = true;
+bool volume_change = true;
+int page = 0;
+
+// Timer
+u_long oldTime_display_drawWiFi = 5000;
 
 // Initialize Touch
 #define XPT2046_IRQ 36
@@ -29,6 +33,7 @@ struct Config
 {
   char wifi_SSID[32];
   char wifi_PW[32];
+  int audio_Volume;
 };
 
 const char *filename = "/config.json";
@@ -39,22 +44,7 @@ void setup()
   bool succeeded;
   Serial.begin(115200);
 
-  // Start the SPI for the touch screen and init the TS library
-  touchSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
-  ts.begin(touchSpi);
-  ts.setRotation(1);
-
-  // Start the TFT display and set it to black
-  tft.init();
-  tft.setRotation(1); // This is the display in landscape
-  tft.setTextWrap(true, true);
-
-  // Clear the screen before writing to it and set default text colors
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("Title", 0, 10, 1);
-
-  initialize_SDCard();
+  sdcard_initialize();
 
   // Load config
   File file = SD.open(filename, "r");
@@ -69,9 +59,20 @@ void setup()
     if (error)
       Serial.println(F("Can't read config from file"));
 
+    // Get Wifi Settings
     strlcpy(config.wifi_SSID, doc["wifi_SSID"], sizeof(config.wifi_SSID));
     strlcpy(config.wifi_PW, doc["wifi_PW"], sizeof(config.wifi_PW));
+
+    // Get Audio Settings
+    config.audio_Volume = doc["audio_Volume"];
   }
+
+  // Initialize Touch Screen
+  touchSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
+  ts.begin(touchSpi);
+  ts.setRotation(1);
+
+  display_initialize();
 
   // Connect to WiFi
   WiFi.begin(config.wifi_SSID, config.wifi_PW);
@@ -90,24 +91,53 @@ void setup()
 
   // Setup audio
   audio.forceMono(true);
-  audio.setVolume(5);
-  audio.setTone(0, 0, 0);
-
-  /*
-  do
-  {
-    // Connect to 'FM - Disco Ball 70's-80's Los Angeles'
-    succeeded = audio.connecttohost("https://edge51.streamonkey.net/radio886-newrock/stream/mp3?aggregator=886Website;");
-    delay(500);
-    Serial.println("Retrying");
-  } while (!succeeded);
-  */
+  audio.setVolume(config.audio_Volume);
 }
 
 void loop()
 {
   // Prcoess audio
-  audio.loop();
+  // audio.loop();
+
+  if (ts.touched())
+  {
+    TS_Point p = ts.getPoint();
+    Serial.print("Pressure = ");
+    Serial.print(p.z);
+    Serial.print(", x = ");
+    Serial.print(p.x);
+    Serial.print(", y = ");
+    Serial.print(p.y);
+    Serial.println();
+  }
+
+  if (millis() - oldTime_display_drawWiFi >= 5000)
+  {
+    display_drawWiFi(WiFi.RSSI(), WiFi.SSID().c_str());
+    oldTime_display_drawWiFi = millis();
+  }
+  switch (page)
+  {
+  case 0:
+    if (menu_change)
+    {
+      display_clearScreen();
+      display_drawMainFrame();
+      display_drawMainButtons();
+      menu_change = false;
+    }
+
+    if  (volume_change)
+    {
+      display_drawMainVolume(config.audio_Volume);
+      volume_change = false;
+    }
+    break;
+
+  default:
+    break;
+  }
+  delay(100);
 }
 
 void audio_id3data(const char *info)

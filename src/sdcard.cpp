@@ -6,7 +6,7 @@
 // Initialize SD-Card
  SPIClass sdSpi = SPIClass(VSPI);
 
-void initialize_SDCard()
+void sdcard_initialize()
 {
     // Initialize SD-Card
     if (!SD.begin(SS, sdSpi, 80000000))
