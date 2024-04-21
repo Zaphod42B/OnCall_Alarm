@@ -78,35 +78,3 @@ void sdcard_loadConfig()
         file.close();
     }
 }
-
-void sdcard_saveConfig()
-{
-    SD.remove(file_config);
-    File file = SD.open(file_config, FILE_WRITE);
-    if (!file)
-    {
-        Serial.println("Failed to create file");
-        return;
-    }
-    else
-    {
-        JsonDocument doc;
-
-        // Save Wifi Settings
-        doc["wifi_SSID"] = config.wifi_SSID;
-        doc["wifi_PW"] = config.wifi_PW;
-
-        // Save Audio Settings
-        doc["audio_Volume"] = config.audio_Volume;
-
-        // Save Armed state
-        doc["is_Armed"] = config.is_Armed;
-
-        // Serialize JSON to file
-        if (serializeJson(doc, file) == 0)
-        {
-            Serial.println(F("Failed to write to file"));
-        }
-        file.close();
-    }
-}
