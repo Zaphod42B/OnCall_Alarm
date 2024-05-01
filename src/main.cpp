@@ -72,7 +72,6 @@ void setup()
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
   timerAlarmWrite(Timer0_Cfg, 20, true);
   timerAlarmEnable(Timer0_Cfg);
-  // Enable DAC1 Channel's Output
 }
 
 void loop()
@@ -82,10 +81,13 @@ void loop()
   touch_newPoint();
 
   // Update Time from NTP every 10 seconds
-  if (millis() - oldTime_time_update >= TIMER_TIME_UPDATE && iotWebConf.getState() == 4)
+  if (millis() - oldTime_time_update >= TIMER_TIME_UPDATE)
   {
-    time_update();
-    oldTime_time_update = millis();
+    if (iotWebConf.getState() == 4)
+    {
+      time_update();
+      oldTime_time_update = millis();
+    }
   }
 
   // Draw WiFi and Time every 5 seconds

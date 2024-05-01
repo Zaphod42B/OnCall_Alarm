@@ -3,6 +3,7 @@
 
 #include <string>
 
+void time_set_timezone();
 void time_update();
 
 #endif

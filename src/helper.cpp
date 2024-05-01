@@ -8,6 +8,13 @@
 
 const char *timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
 
+void time_set_timezone()
+{
+    Serial.printf("Setting Timezone to %s\n\n", timezone);
+    setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
+    tzset();
+}
+
 void time_update()
 {
     struct tm timeinfo;
@@ -25,9 +32,7 @@ void time_update()
         Serial.printf("[Done]\n\n");
     }
 
-    Serial.printf("Setting Timezone to %s\n\n", timezone);
-    setenv("TZ", timezone, 1); //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
-    tzset();
+   time_set_timezone();
 
     getLocalTime(&timeinfo);
 

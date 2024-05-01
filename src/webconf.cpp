@@ -1,5 +1,6 @@
-#include <WebConf.h>
-#include <IotWebConfUsing.h>
+#include <string.h>
+
+#include "WebConf.h"
 
 // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
 const char thingName[] = "OnCallAlarm";
@@ -8,9 +9,7 @@ const char thingName[] = "OnCallAlarm";
 const char wifiInitialApPassword[] = "Alarm123!";
 
 // -- Configuration specific key. The value should be modified if config structure was changed.
-#define CONFIG_VERSION "1"
-
-#define STRING_LEN 64
+#define CONFIG_VERSION "1.1"
 
 DNSServer dnsServer;
 WebServer server(80);
@@ -21,23 +20,24 @@ char string_teams_ClientSecret[STRING_LEN];
 
 IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, CONFIG_VERSION);
 
-IotWebConfParameterGroup group1 = IotWebConfParameterGroup("group1", "Teams configuration");
-IotWebConfTextParameter teams_TenantID = IotWebConfTextParameter("Tenant ID", "tenantid", string_teams_TenantID, STRING_LEN);
-IotWebConfTextParameter teams_AppID = IotWebConfTextParameter("Application ID", "appid", string_teams_AppID, STRING_LEN);
-IotWebConfTextParameter teams_ClientSecret = IotWebConfTextParameter("Client Secret", "secret", string_teams_ClientSecret, STRING_LEN);
+IotWebConfParameterGroup teams_ConfigGroup = IotWebConfParameterGroup("iwcTeamsConfig", "Teams configuration");
+IotWebConfTextParameter teams_TenantID = IotWebConfTextParameter("Tenant ID", "iwcTenantID", string_teams_TenantID, STRING_LEN);
+IotWebConfTextParameter teams_AppID = IotWebConfTextParameter("Application ID", "iwcAppID", string_teams_AppID, STRING_LEN);
+IotWebConfPasswordParameter teams_ClientSecret = IotWebConfPasswordParameter("Client Secret", "iwcClientSecret", string_teams_ClientSecret, STRING_LEN);
 
 void webconf_init()
 {
-    group1.addItem(&teams_TenantID);
-    group1.addItem(&teams_AppID);
-    group1.addItem(&teams_ClientSecret);
+    teams_ConfigGroup.addItem(&teams_TenantID);
+    teams_ConfigGroup.addItem(&teams_AppID);
+    teams_ConfigGroup.addItem(&teams_ClientSecret);
 
-    iotWebConf.addParameterGroup(&group1);
+    iotWebConf.addParameterGroup(&teams_ConfigGroup);
 
     iotWebConf.setConfigSavedCallback(&webconf_configSaved);
     iotWebConf.getApTimeoutParameter()->visible = true;
 
     iotWebConf.init();
+    iotWebConf.setApTimeoutMs(0);
 
     // -- Set up required URL handlers on the web server.
     server.on("/", webconf_handleRoot);
@@ -64,7 +64,7 @@ void webconf_handleRoot()
     s += "<li><b>Application ID: </b>";
     s += string_teams_AppID;
     s += "<li><b>Client Secret: </b>";
-    s += string_teams_ClientSecret;
+    s += "&lt;Hidden&gt;";
     s += "</ul>";
     s += "Go to <a href='config'>configure page</a> to change values.";
     s += "</body></html>\n";
