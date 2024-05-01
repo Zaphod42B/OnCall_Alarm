@@ -8,6 +8,7 @@
 #include "Touch.h"
 #include "Helper.h"
 #include "WebConf.h"
+#include "Graph.h"
 
 bool menu_change = true;
 bool volume_change = true;
@@ -87,6 +88,11 @@ void loop()
     {
       time_update();
       oldTime_time_update = millis();
+
+      if (!authToken.isValid)
+      {
+        graph_getAuthToken();
+      }
     }
   }
 

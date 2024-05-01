@@ -9,5 +9,6 @@ extern bool button_change;
 extern int page;
 
 extern Config config;
+extern AuthToken authToken;
 
 #endif

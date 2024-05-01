@@ -10,4 +10,12 @@ typedef struct
   char teams_ClientSecret[64];
 } Config;
 
+typedef struct
+{
+  bool isValid = false;
+  char token_type[32];
+  int expires_in;
+  char access_token[256];
+} AuthToken;
+
 #endif
