@@ -6,5 +6,7 @@
 #include <HTTPClient.h>
 
 void graph_getAuthToken();
+void graph_checkAuthToken();
+void graph_pollTeamsChannel();
 
 #endif

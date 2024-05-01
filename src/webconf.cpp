@@ -18,18 +18,19 @@ char string_teams_TenantID[STRING_LEN];
 char string_teams_AppID[STRING_LEN];
 char string_teams_ClientSecret[STRING_LEN];
 
+char string_teams_User_Name[STRING_LEN];
+char string_teams_User_Password[STRING_LEN];
+
 IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, CONFIG_VERSION);
 
 IotWebConfParameterGroup teams_ConfigGroup = IotWebConfParameterGroup("iwcTeamsConfig", "Teams configuration");
 IotWebConfTextParameter teams_TenantID = IotWebConfTextParameter("Tenant ID", "iwcTenantID", string_teams_TenantID, STRING_LEN);
 IotWebConfTextParameter teams_AppID = IotWebConfTextParameter("Application ID", "iwcAppID", string_teams_AppID, STRING_LEN);
-IotWebConfPasswordParameter teams_ClientSecret = IotWebConfPasswordParameter("Client Secret", "iwcClientSecret", string_teams_ClientSecret, STRING_LEN);
 
 void webconf_init()
 {
     teams_ConfigGroup.addItem(&teams_TenantID);
     teams_ConfigGroup.addItem(&teams_AppID);
-    teams_ConfigGroup.addItem(&teams_ClientSecret);
 
     iotWebConf.addParameterGroup(&teams_ConfigGroup);
 
@@ -63,8 +64,6 @@ void webconf_handleRoot()
     s += string_teams_TenantID;
     s += "<li><b>Application ID: </b>";
     s += string_teams_AppID;
-    s += "<li><b>Client Secret: </b>";
-    s += "&lt;Hidden&gt;";
     s += "</ul>";
     s += "Go to <a href='config'>configure page</a> to change values.";
     s += "</body></html>\n";

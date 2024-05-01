@@ -81,6 +81,11 @@ void loop()
 
   touch_newPoint();
 
+  if (iotWebConf.getState() == 4)
+  {
+    graph_checkAuthToken();
+  }
+
   // Update Time from NTP every 10 seconds
   if (millis() - oldTime_time_update >= TIMER_TIME_UPDATE)
   {
@@ -88,11 +93,7 @@ void loop()
     {
       time_update();
       oldTime_time_update = millis();
-
-      if (!authToken.isValid)
-      {
-        graph_getAuthToken();
-      }
+      graph_pollTeamsChannel();
     }
   }
 
