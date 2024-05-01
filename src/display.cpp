@@ -22,6 +22,7 @@ void display_initialize()
     tft.invertDisplay(0);
     tft.setRotation(1); // This is the display in landscape
     tft.setTextWrap(true, true);
+    tft.fillScreen(TFT_BLACK);
 }
 
 void display_clearScreen()
@@ -125,27 +126,26 @@ void display_drawMainButtons()
 
 void display_drawMainVolume()
 {
-    tft.setTextColor(TFT_WHITE);
-    tft.setTextDatum(MC_DATUM);
-    tft.setFreeFont(FSS9);
-
-    tft.drawFastVLine(0, 25, 175, TFT_WHITE);
-    tft.drawFastVLine(25, 25, 175, TFT_WHITE);
-
-    tft.fillRect(1, 26, 24, 174, TFT_BLACK);
-
+    sprite.setColorDepth(8);
+    sprite.createSprite(26, 176);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(MC_DATUM);
+    sprite.setFreeFont(FSS9);
+    sprite.drawRect(0, 0, 26, 176, TFT_WHITE);
     if (config.audio_Volume > 0)
     {
-        int volHeight = 26 + ((10 - config.audio_Volume) * (175 / 10));
-        tft.fillRect(1, volHeight, 24, 200 - volHeight, TFT_DARKGREY);
-        tft.drawRect(1, volHeight, 24, 200 - volHeight, TFT_BLACK);
+        int volHeight = ((15 - config.audio_Volume) * (174 / 15));
+        sprite.fillRect(2, volHeight + 2, 22, 172 - volHeight, TFT_DARKGREY);
     }
-
-    tft.drawCentreString("10", 11, 30, GFXFF);
-    tft.drawCentreString("0", 12, HEIGHT - 60, GFXFF);
+    sprite.drawCentreString("15", 11, 5, GFXFF);
+    sprite.drawCentreString("0", 12, 155, GFXFF);
+    sprite.pushSprite(0, 25);
+    sprite.deleteSprite();
 }
 
-void display_drawTime(){
+void display_drawTime()
+{
 
     struct tm timeinfo;
 

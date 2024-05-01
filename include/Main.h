@@ -4,10 +4,10 @@
 // Initialize Config
 typedef struct
 {
-  char wifi_SSID[32];
-  char wifi_PW[32];
-  int audio_Volume;
-  int is_Armed;
+  int audio_Volume = 10;
+  int is_Armed = true;
+  char teams_AppID[64];
+  char teams_ClientSecret[64];
 } Config;
 
 #endif

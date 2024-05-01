@@ -5,7 +5,7 @@
 #include "Free_Fonts.h"
 #include "Main.h"
 #include "Extern.h"
-#include "SDCard.h"
+#include <driver/dac.h>
 
 // Initialize Touch
 #define XPT2046_IRQ 36
@@ -67,7 +67,7 @@ void touch_newPoint()
             // Button "+"
             else if (touch_x >= 51 && touch_x <= 100 && touch_y >= 200 && touch_y <= 240)
             {
-                if (config.audio_Volume < 10)
+                if (config.audio_Volume < 15)
                 {
                     config.audio_Volume++;
                     volume_change = true;
@@ -79,7 +79,13 @@ void touch_newPoint()
                 config.is_Armed ^= 1;
                 button_change = true;
             }
-
+            // Button "Menu"
+            else if (touch_x >= 220 && touch_x <= 320 && touch_y >= 200 && touch_y <= 240)
+            {
+                dac_output_enable(DAC_CHANNEL_2);
+                delay(1000);
+                dac_output_disable(DAC_CHANNEL_2);
+            }
             is_touched = true;
         }
     }
