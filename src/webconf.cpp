@@ -9,30 +9,37 @@ const char thingName[] = "OnCallAlarm";
 const char wifiInitialApPassword[] = "Alarm123!";
 
 // -- Configuration specific key. The value should be modified if config structure was changed.
-#define CONFIG_VERSION "1.1"
+#define CONFIG_VERSION "1.2"
 
 DNSServer dnsServer;
 WebServer server(80);
 
 char string_teams_TenantID[STRING_LEN];
 char string_teams_AppID[STRING_LEN];
-char string_teams_ClientSecret[STRING_LEN];
+char string_teams_TeamID[STRING_LEN];
+char string_teams_ChannelID[STRING_LEN];
+char string_reauthToken[2048];
 
-char string_teams_User_Name[STRING_LEN];
-char string_teams_User_Password[STRING_LEN];
 
 IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, CONFIG_VERSION);
 
 IotWebConfParameterGroup teams_ConfigGroup = IotWebConfParameterGroup("iwcTeamsConfig", "Teams configuration");
 IotWebConfTextParameter teams_TenantID = IotWebConfTextParameter("Tenant ID", "iwcTenantID", string_teams_TenantID, STRING_LEN);
 IotWebConfTextParameter teams_AppID = IotWebConfTextParameter("Application ID", "iwcAppID", string_teams_AppID, STRING_LEN);
+IotWebConfTextParameter teams_TeamID = IotWebConfTextParameter("Teams ID", "iwcTeamsID", string_teams_TeamID, STRING_LEN);
+IotWebConfTextParameter teams_ChannelID = IotWebConfTextParameter("Channel ID", "iwcChannelID", string_teams_ChannelID, STRING_LEN);
+
+IotWebConfPasswordParameter reauthToken = IotWebConfPasswordParameter("Reauth Token", "iwcReauthToken", string_reauthToken, 2048);
 
 void webconf_init()
 {
     teams_ConfigGroup.addItem(&teams_TenantID);
     teams_ConfigGroup.addItem(&teams_AppID);
+    teams_ConfigGroup.addItem(&teams_TeamID);
+    teams_ConfigGroup.addItem(&teams_ChannelID);
 
     iotWebConf.addParameterGroup(&teams_ConfigGroup);
+    iotWebConf.addHiddenParameter(&reauthToken);
 
     iotWebConf.setConfigSavedCallback(&webconf_configSaved);
     iotWebConf.getApTimeoutParameter()->visible = true;

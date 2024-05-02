@@ -67,7 +67,8 @@ void setup()
   display_initialize();
 
   webconf_init();
-
+  graph_loadReauthToken();
+  
   // Configure Timer0 Interrupt
   Timer0_Cfg = timerBegin(0, 80, true);
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);

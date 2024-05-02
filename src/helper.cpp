@@ -32,7 +32,7 @@ void time_update()
         Serial.printf("[Done]\n\n");
     }
 
-   time_set_timezone();
+    time_set_timezone();
 
     getLocalTime(&timeinfo);
 
@@ -43,3 +43,4 @@ void time_update()
     Serial.printf("Time: %s\n", time_string);
     Serial.printf("Date: %s\n\n", date_string);
 }
+

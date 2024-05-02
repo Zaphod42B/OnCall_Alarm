@@ -7,8 +7,6 @@
 
 #include "Helper.h"
 
-#include "Free_Fonts.h"
-
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite sprite = TFT_eSprite(&tft);
 

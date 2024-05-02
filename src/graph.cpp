@@ -1,17 +1,23 @@
 #include "Graph.h"
 #include "WebConf.h"
 #include "Extern.h"
+#include "Display.h"
 
 HTTPClient http;
 
 AuthToken authToken;
 
-#define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.50) * 1000 //
+#define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.75) * 1000 //
+
+void graph_loadReauthToken()
+{
+    strlcpy(authToken.refresh_token, string_reauthToken, sizeof(string_reauthToken));
+}
 
 void graph_getAuthToken()
 {
     String graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/devicecode";
-    String httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope + "&client_secret=" + String(string_teams_ClientSecret) + "&grant_type=client_credentials";
+    String httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope;
 
     http.begin(graphEndpoint);
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -86,23 +92,74 @@ void graph_getAuthToken()
             strlcpy(authToken.token_type, userAuth["token_type"], sizeof(authToken.token_type));
             strlcpy(authToken.access_token, userAuth["access_token"], sizeof(authToken.access_token));
             strlcpy(authToken.refresh_token, userAuth["refresh_token"], sizeof(authToken.refresh_token));
+            strlcpy(string_reauthToken, authToken.refresh_token, sizeof(authToken.refresh_token));
+            iotWebConf.saveConfig();
         }
         http.end();
     }
+}
+
+bool graph_reAuthToken()
+{
+    String graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
+    String httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope + "&refresh_token=" + authToken.refresh_token + "&grant_type=refresh_token";
+
+    http.begin(graphEndpoint);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+    int httpResponseCode = http.POST(httpRequestData);
+
+    Serial.print("Refreshing Auth Token... ");
+    if (httpResponseCode != 200)
+    {
+        Serial.printf("[ERROR] HTTP-Response: %i\n", httpResponseCode);
+        Serial.println(http.getString());
+        http.end();
+        return false;
+    }
+
+    Serial.printf("[SUCCESS] HTTP-Response: %i\n", httpResponseCode);
+
+    // Allocate the JSON document
+    JsonDocument doc;
+
+    // Parse JSON object
+    DeserializationError error = deserializeJson(doc, http.getString());
+    if (error)
+    {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        http.end();
+        return false;
+    }
+
+    authToken.token_request_millis = millis();
+    authToken.expires_in = doc["expires_in"];
+    strlcpy(authToken.token_type, doc["token_type"], sizeof(authToken.token_type));
+    strlcpy(authToken.access_token, doc["access_token"], sizeof(authToken.access_token));
+    strlcpy(authToken.refresh_token, doc["refresh_token"], sizeof(authToken.refresh_token));
+    strlcpy(string_reauthToken, authToken.refresh_token, sizeof(authToken.refresh_token));
+    iotWebConf.saveConfig();
+
+    http.end();
+
+    return true;
 }
 
 void graph_checkAuthToken()
 {
     if (authToken.token_request_millis + TOKEN_MIN_LIFETIME < millis())
     {
-        graph_getAuthToken();
+        if (!graph_reAuthToken())
+        {
+            graph_getAuthToken();
+        }
     }
 }
 
 void graph_pollTeamsChannel()
 {
-    String graphEndpoint = "https://graph.microsoft.com/v1.0/teams/b070b0e9-ed57-4927-843e-14e4bac88141/channels/19%3A97a486862fb143f192e7e5a15b0cdf68%40thread.tacv2/messages?top=1";
-    // String graphEndpoint = "https://graph.microsoft.com/v1.0/teams/987516c1-4d73-4dda-a04e-99ae3e46e412/channels/19%3Au8TSdhV2QtC5AoothUBBMHvoTI5mzhyyyv5YoQzPv1I1%40thread.tacv2/messages?top=1";
+    String graphEndpoint = "https://graph.microsoft.com/v1.0/teams/" + String(string_teams_TeamID) + "/channels/" + String(string_teams_ChannelID) + "/messages?top=1";
 
     http.begin(graphEndpoint);
     http.addHeader("Authorization", "Bearer " + String(authToken.access_token));
@@ -144,4 +201,27 @@ void graph_pollTeamsChannel()
     Serial.println(msgIndex["subject"].as<String>());
     Serial.print("Message: ");
     Serial.println(msgIndex["body"]["content"].as<String>());
+
+    sprite.setColorDepth(8);
+    sprite.createSprite(220, 30);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
+    sprite.setFreeFont(FSSB18);
+    sprite.drawString(msgIndex["subject"].as<String>(), 0, 0, GFXFF);
+    sprite.pushSprite(30, 30);
+    sprite.deleteSprite();
+
+    sprite.setColorDepth(8);
+    sprite.createSprite(270, 130);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
+    sprite.setFreeFont(FSS9);
+    sprite.drawString(msgIndex["body"]["content"].as<String>(), 0, 5, GFXFF);
+    sprite.drawString(msgIndex["id"].as<String>(), 0, 30, GFXFF);
+    sprite.drawString(msgIndex["createdDateTime"].as<String>(), 0, 55, GFXFF);
+    sprite.drawString(String((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000), 0, 80, GFXFF);
+    sprite.pushSprite(30, 60);
+    sprite.deleteSprite();
 }

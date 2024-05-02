@@ -3,6 +3,8 @@
 
 #include <TFT_eSPI.h>
 
+#include "Free_Fonts.h"
+
 extern TFT_eSPI tft;
 extern TFT_eSprite sprite;
 

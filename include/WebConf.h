@@ -13,7 +13,9 @@ extern IotWebConf iotWebConf;
 
 extern char string_teams_TenantID[STRING_LEN];
 extern char string_teams_AppID[STRING_LEN];
-extern char string_teams_ClientSecret[STRING_LEN];
+extern char string_teams_TeamID[STRING_LEN];
+extern char string_teams_ChannelID[STRING_LEN];
+extern char string_reauthToken[2048];
 
 void webconf_init();
 void webconf_handleRoot();
