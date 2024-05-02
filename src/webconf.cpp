@@ -20,7 +20,6 @@ char string_teams_TeamID[STRING_LEN];
 char string_teams_ChannelID[STRING_LEN];
 char string_reauthToken[2048];
 
-
 IotWebConf iotWebConf(thingName, &dnsServer, &server, wifiInitialApPassword, CONFIG_VERSION);
 
 IotWebConfParameterGroup teams_ConfigGroup = IotWebConfParameterGroup("iwcTeamsConfig", "Teams configuration");
@@ -64,13 +63,24 @@ void webconf_handleRoot()
         return;
     }
     String s = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\"/>";
-    s += "<title>IotWebConf 03 Custom Parameters</title></head><body>";
+    s += "<title>OnCallAlarm config</title></head><body>";
+    s += "<h3>Connected to WiFi:</h3>";
+    s += "<ul>";
+    s += "<li><b>SSID: </b>";
+    s += WiFi.SSID();
+    s += "<li><b>RSSI: </b>";
+    s += WiFi.RSSI();
+    s += "</ul>";
     s += "<h3>Teams configuration:</h3>";
     s += "<ul>";
     s += "<li><b>Tenant ID: </b>";
     s += string_teams_TenantID;
     s += "<li><b>Application ID: </b>";
     s += string_teams_AppID;
+    s += "<li><b>Team ID: </b>";
+    s += string_teams_TeamID;
+    s += "<li><b>Channel ID: </b>";
+    s += string_teams_ChannelID;
     s += "</ul>";
     s += "Go to <a href='config'>configure page</a> to change values.";
     s += "</body></html>\n";

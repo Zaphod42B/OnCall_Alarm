@@ -10,5 +10,6 @@ extern int page;
 
 extern Config config;
 extern AuthToken authToken;
+extern TeamsMsg teamsMsg;
 
 #endif

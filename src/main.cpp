@@ -19,7 +19,7 @@ int page = 0;
 #define TIMER_DRAW_WIFI 5000
 u_long oldTime_display_drawWiFi = 0;
 
-#define TIMER_TIME_UPDATE 10000
+#define TIMER_TIME_UPDATE 60000
 u_long oldTime_time_update = 0;
 
 // Initialize Audio
@@ -68,7 +68,7 @@ void setup()
 
   webconf_init();
   graph_loadReauthToken();
-  
+
   // Configure Timer0 Interrupt
   Timer0_Cfg = timerBegin(0, 80, true);
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
@@ -87,7 +87,7 @@ void loop()
     graph_checkAuthToken();
   }
 
-  // Update Time from NTP every 10 seconds
+  // Update Time from NTP every 60 seconds
   if (millis() - oldTime_time_update >= TIMER_TIME_UPDATE)
   {
     if (iotWebConf.getState() == 4)

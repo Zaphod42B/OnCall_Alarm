@@ -6,6 +6,7 @@
 HTTPClient http;
 
 AuthToken authToken;
+TeamsMsg teamsMsg;
 
 #define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.75) * 1000 //
 
@@ -193,14 +194,19 @@ void graph_pollTeamsChannel()
 
     JsonObject msgIndex = msgArray["value"][0];
 
+    teamsMsg.lastPoll = millis();
+    teamsMsg.Id = msgIndex["id"].as<int>();
+    strlcpy(teamsMsg.subject, msgIndex["subject"], sizeof(teamsMsg.subject));
+    strlcpy(teamsMsg.body, msgIndex["body"]["content"], sizeof(teamsMsg.subject));
+
     Serial.print("ID: ");
-    Serial.println(msgIndex["id"].as<String>());
+    Serial.println(teamsMsg.Id);
     Serial.print("Created: ");
-    Serial.println(msgIndex["createdDateTime"].as<String>());
+    Serial.println(teamsMsg.createdDateTime);
     Serial.print("Subject: ");
-    Serial.println(msgIndex["subject"].as<String>());
+    Serial.println(teamsMsg.subject);
     Serial.print("Message: ");
-    Serial.println(msgIndex["body"]["content"].as<String>());
+    Serial.println(teamsMsg.body);
 
     sprite.setColorDepth(8);
     sprite.createSprite(220, 30);
@@ -208,20 +214,21 @@ void graph_pollTeamsChannel()
     sprite.setTextColor(TFT_WHITE);
     sprite.setTextDatum(TL_DATUM);
     sprite.setFreeFont(FSSB18);
-    sprite.drawString(msgIndex["subject"].as<String>(), 0, 0, GFXFF);
+    sprite.drawString(teamsMsg.subject, 0, 0, GFXFF);
     sprite.pushSprite(30, 30);
     sprite.deleteSprite();
 
     sprite.setColorDepth(8);
-    sprite.createSprite(270, 130);
+    sprite.createSprite(285, 105);
     sprite.fillSprite(TFT_BLACK);
     sprite.setTextColor(TFT_WHITE);
     sprite.setTextDatum(TL_DATUM);
-    sprite.setFreeFont(FSS9);
-    sprite.drawString(msgIndex["body"]["content"].as<String>(), 0, 5, GFXFF);
-    sprite.drawString(msgIndex["id"].as<String>(), 0, 30, GFXFF);
-    sprite.drawString(msgIndex["createdDateTime"].as<String>(), 0, 55, GFXFF);
-    sprite.drawString(String((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000), 0, 80, GFXFF);
+    sprite.setTextFont(2);
+
+    sprite.setCursor(0, 5);
+    sprite.println(teamsMsg.body);
+    sprite.println(String((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000));
+
     sprite.pushSprite(30, 60);
     sprite.deleteSprite();
 }

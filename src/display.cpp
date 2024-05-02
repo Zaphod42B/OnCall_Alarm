@@ -32,14 +32,15 @@ void display_clearScreen()
 
 void display_drawWiFi(int RSSI, const char *wifiName)
 {
-    tft.setTextColor(TFT_WHITE, TFT_BLACK, true);
-    tft.setTextDatum(TL_DATUM);
-
-    tft.drawRect(280, 0, 40, 23, TFT_BLACK);
+    sprite.setColorDepth(8);
+    sprite.createSprite(215, 25);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
 
     uint16_t signalColor = TFT_GREEN;
 
-    if (RSSI < -80)
+    if (RSSI <= -80)
     {
         signalColor = TFT_RED;
     }
@@ -48,33 +49,35 @@ void display_drawWiFi(int RSSI, const char *wifiName)
     char temp[32];
     sprintf(temp, "%i dBm | %s", RSSI, wifiName);
 
-    tft.setTextFont(1);
-    tft.drawString(temp, start_x + 24, 4, 2);
+    sprite.drawString(temp, start_x + 24, 4, 2);
 
     if (RSSI >= -90)
     {
-        tft.drawRect(start_x, 20, 2, 2, signalColor);
+        sprite.drawRect(start_x, 20, 2, 2, signalColor);
     }
     if (RSSI >= -80)
     {
-        tft.drawRect(start_x + 4, 16, 2, 6, signalColor);
+        sprite.drawRect(start_x + 4, 16, 2, 6, signalColor);
     }
     if (RSSI >= -70)
     {
-        tft.drawRect(start_x + 8, 12, 2, 10, signalColor);
+        sprite.drawRect(start_x + 8, 12, 2, 10, signalColor);
     }
     if (RSSI >= -67)
     {
-        tft.drawRect(start_x + 12, 8, 2, 14, signalColor);
+        sprite.drawRect(start_x + 12, 8, 2, 14, signalColor);
     }
     if (RSSI >= -55)
     {
-        tft.drawRect(start_x + 16, 4, 2, 18, signalColor);
+        sprite.drawRect(start_x + 16, 4, 2, 18, signalColor);
     }
     if (RSSI >= -30)
     {
-        tft.drawRect(start_x + 20, 0, 2, 22, signalColor);
+        sprite.drawRect(start_x + 20, 0, 2, 22, signalColor);
     }
+
+    sprite.pushSprite(0, 0);
+    sprite.deleteSprite();
 }
 
 void display_drawMainFrame()

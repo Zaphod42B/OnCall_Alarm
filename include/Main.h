@@ -6,8 +6,6 @@ typedef struct
 {
   int audio_Volume = 10;
   int is_Armed = true;
-  char teams_AppID[64];
-  char teams_ClientSecret[64];
 } Config;
 
 typedef struct
@@ -19,5 +17,14 @@ typedef struct
   char access_token[4096];
   char refresh_token[2048];
 } AuthToken;
+
+typedef struct
+{
+  u_long lastPoll = 0;
+  unsigned long long Id = 0;
+  char subject[128];
+  char body[512];
+  char createdDateTime[32];
+} TeamsMsg;
 
 #endif

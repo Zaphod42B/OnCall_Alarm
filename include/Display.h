@@ -15,5 +15,6 @@ void display_drawMainFrame();
 void display_drawMainButtons();
 void display_drawMainVolume();
 void display_drawTime();
+void display_pollTimer();
 
 #endif
