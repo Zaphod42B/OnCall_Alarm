@@ -10,6 +10,8 @@
 #include "WebConf.h"
 #include "Graph.h"
 
+bool userAuthenticated = false;
+
 bool menu_change = true;
 bool volume_change = true;
 bool button_change = true;
@@ -19,10 +21,22 @@ int page = 0;
 #define TIMER_DRAW_WIFI 5000
 u_long oldTime_display_drawWiFi = TIMER_DRAW_WIFI; // Time between WiFi and Time refresh in display in ms
 
-#define TIMER_TIME_UPDATE 60000
-u_long oldTime_time_update = TIMER_TIME_UPDATE; // Time between polling NTP-Server in ms
+#define TIMER_60_SECONDS 60000
+u_long old_timer_60_seconds = TIMER_60_SECONDS;
 
-SemaphoreHandle_t sem; // Create semaphore handle
+#define TIMER_5_MINUTES 300000
+u_long old_timer_5_minutes = TIMER_5_MINUTES;
+
+// Create semaphore handle
+SemaphoreHandle_t sem;
+
+// create task handle
+TaskHandle_t PollNtp;
+TaskHandle_t CheckAuthToken;
+TaskHandle_t PollTeamsChannel;
+
+// Create timeinfo handle
+tm timeinfo;
 
 // Initialize Audio
 // Audio audio(true, I2S_DAC_CHANNEL_LEFT_EN);
@@ -78,28 +92,28 @@ void setup()
   if (xTaskCreatePinnedToCore(
           graph_checkAuthToken, // Function name of the task
           "CheckAuthToken",     // Name of the task (e.g. for debugging)
-          30000,                // Stack size (bytes)
+          8192,                 // Stack size (bytes)
           NULL,                 // Parameter to pass
           1,                    // Task priority
-          NULL,                 // Task handle
+          &CheckAuthToken,      // Task handle
           1                     // Run on Core 1
           ))
   {
-    Serial.println("Refresh task for Auth Token started!");
+    Serial.printf("Refresh task for Auth Token started!\n\n");
   }
   else
   {
-    Serial.println("Error starting refres task for Auth Token!");
+    Serial.printf("Error starting refres task for Auth Token!\n\n");
   }
 
   // Start Teams polling
   if (xTaskCreatePinnedToCore(
           graph_pollTeamsChannel, // Function name of the task
           "PollTeamsChannel",     // Name of the task (e.g. for debugging)
-          40000,                  // Stack size (bytes)
+          8192,                   // Stack size (bytes)
           NULL,                   // Parameter to pass
           1,                      // Task priority
-          NULL,                   // Task handle
+          &PollTeamsChannel,      // Task handle
           1                       // Run on Core 1
           ))
   {
@@ -108,6 +122,24 @@ void setup()
   else
   {
     Serial.println("Error starting Teams polling!");
+  }
+
+  // Start NTP polling
+  if (xTaskCreatePinnedToCore(
+          time_update, // Function name of the task
+          "PollNtp",   // Name of the task (e.g. for debugging)
+          2048,        // Stack size (bytes)
+          NULL,        // Parameter to pass
+          1,           // Task priority
+          &PollNtp,    // Task handle
+          1            // Run on Core 1
+          ))
+  {
+    Serial.println("NTP polling startet successfully!");
+  }
+  else
+  {
+    Serial.println("Error starting NTP polling!");
   }
 
   // Configure Timer0 Interrupt
@@ -123,16 +155,6 @@ void loop()
 
   touch_newPoint();
 
-  // Update Time from NTP every 60 seconds
-  if (millis() - oldTime_time_update >= TIMER_TIME_UPDATE)
-  {
-    if (iotWebConf.getState() == 4)
-    {
-      time_update();
-      oldTime_time_update = millis();
-    }
-  }
-
   // Draw WiFi and Time every 5 seconds
   if (millis() - oldTime_display_drawWiFi >= TIMER_DRAW_WIFI)
   {
@@ -140,9 +162,32 @@ void loop()
     {
       display_drawWiFi();
       display_drawTime();
+    }
+    if (!userAuthenticated)
+    {
+      display_getAuthToken();
+    }
+    else
+    {
       display_teamsMessage();
     }
     oldTime_display_drawWiFi = millis();
+  }
+
+  // Run every 60 Seconds
+  if (millis() - old_timer_60_seconds >= TIMER_60_SECONDS)
+  {
+    old_timer_60_seconds = millis();
+  }
+
+  // Run every 5 Minutes
+  if (millis() - old_timer_5_minutes >= TIMER_5_MINUTES)
+  {
+    Serial.println("[Memory High Watermark from Tasks]");
+    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollNtp), uxTaskGetStackHighWaterMark(PollNtp));
+    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(CheckAuthToken), uxTaskGetStackHighWaterMark(CheckAuthToken));
+    Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(PollTeamsChannel), uxTaskGetStackHighWaterMark(PollTeamsChannel));
+    old_timer_5_minutes = millis();
   }
 
   switch (page)

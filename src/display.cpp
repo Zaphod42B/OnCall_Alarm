@@ -148,7 +148,7 @@ void display_drawMainVolume()
 void display_drawTime()
 {
 
-    struct tm timeinfo;
+    //struct tm timeinfo;
 
     getLocalTime(&timeinfo);
 

@@ -4,6 +4,7 @@
 #include "Display.h"
 
 #define TEAMS_POLLING_INTERVALL 60000
+#define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.75) * 1000 //
 
 HTTPClient http;
 
@@ -14,8 +15,6 @@ DeviceAuth deviceAuth;
 String graphEndpoint;
 String httpRequestData;
 String httpHeader;
-
-#define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.90) * 1000 //
 
 void graph_loadReauthToken()
 {
@@ -32,7 +31,7 @@ void graph_getAuthToken()
 
     int httpResponseCode = http.POST(httpRequestData);
 
-    Serial.print("Device Authorization... ");
+    Serial.printf("\nDevice Authorization... ");
     if (httpResponseCode != 200)
     {
         Serial.printf("[ERROR]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
@@ -67,15 +66,11 @@ void graph_getAuthToken()
     doc.clear();
 
     Serial.println(String(deviceAuth.message));
-    Serial.print("Waiting for User Authorization...");
+    Serial.printf("Waiting for User Authorization...");
 
-    bool userAuthenticated = false;
+    userAuthenticated = false;
     while (!userAuthenticated)
     {
-        display_getAuthToken();
-        display_drawTime();
-        display_drawWiFi();
-
         delay(deviceAuth.interval * 1000);
 
         String graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
@@ -105,7 +100,7 @@ void graph_getAuthToken()
         }
         else if (userAuth["error"].as<String>().compareTo("null") == 0)
         {
-            Serial.println("[SUCCESS]");
+            Serial.println("[SUCCESS]\n\n");
             userAuthenticated = true;
 
             authToken.token_request_millis = millis();
@@ -169,6 +164,7 @@ bool graph_reAuthToken()
 
     http.end();
 
+    userAuthenticated = true;
     return true;
 }
 
@@ -176,12 +172,12 @@ void graph_checkAuthToken(void *parameter)
 {
     while (true)
     {
-        xSemaphoreTake(sem, portMAX_DELAY);
         while (iotWebConf.getState() != 4)
         {
-            Serial.println("Waiting for network connection before starting Auth-Token refreshing Task...");
-            delay(5000);
+            delay(1000);
         }
+
+        xSemaphoreTake(sem, portMAX_DELAY);
         if (!graph_reAuthToken())
         {
             graph_getAuthToken();
@@ -195,6 +191,11 @@ void graph_pollTeamsChannel(void *parameter)
 {
     while (true)
     {
+        while (iotWebConf.getState() != 4)
+        {
+            delay(1000);
+        }
+
         xSemaphoreTake(sem, portMAX_DELAY);
         graphEndpoint = "https://graph.microsoft.com/v1.0/teams/" + String(string_teams_TeamID) + "/channels/" + String(string_teams_ChannelID) + "/messages?top=1";
         httpHeader = "Bearer " + String(authToken.access_token);
@@ -222,8 +223,7 @@ void graph_pollTeamsChannel(void *parameter)
         Serial.println(String(teamsMsg.createdDateTime));
         Serial.print("[Subject]: ");
         Serial.println(teamsMsg.subject);
-        Serial.print("[Message]: ");
-        Serial.println(teamsMsg.body);
+        Serial.printf("[Message]: %s\n\n", teamsMsg.body);
 
         xSemaphoreGive(sem);
         delay(TEAMS_POLLING_INTERVALL);

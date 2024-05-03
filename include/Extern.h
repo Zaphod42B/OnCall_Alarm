@@ -10,6 +10,9 @@ extern bool volume_change;
 extern bool menu_change;
 extern bool button_change;
 extern int page;
+extern bool userAuthenticated;
+
+extern tm timeinfo;
 
 extern Config config;
 extern AuthToken authToken;

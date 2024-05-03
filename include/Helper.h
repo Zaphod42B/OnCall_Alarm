@@ -1,7 +1,6 @@
 #ifndef Helper_h
 #define Helper_h
 
-void time_set_timezone();
-void time_update();
+void time_update(void *parameter);
 
 #endif
