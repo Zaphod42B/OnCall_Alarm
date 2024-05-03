@@ -6,11 +6,23 @@
 #include "Display.h"
 #include "Helper.h"
 
+#define WIDTH 320
+#define HEIGHT 240
+
+// Backlight
+#define LCD_BACK_LIGHT_PIN 21
+#define LEDC_CHANNEL_0 0     // use first channel of 16 channels (started from zero)
+#define LEDC_TIMER_12_BIT 12 // use 12 bit precission for LEDC timer
+#define LEDC_BASE_FREQ 5000  // use 5000 Hz as a LEDC base frequency
+
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite sprite = TFT_eSprite(&tft);
 
-#define WIDTH 320
-#define HEIGHT 240
+void display_adjustBacklight(uint32_t value, uint32_t valueMax)
+{
+    uint32_t duty = (4095 / valueMax) * min(value, valueMax);
+    ledcWrite(LEDC_CHANNEL_0, duty);
+}
 
 void display_initialize()
 {
@@ -20,6 +32,9 @@ void display_initialize()
     tft.setRotation(1); // This is the display in landscape
     tft.setTextWrap(true, true);
     tft.fillScreen(TFT_BLACK);
+
+    ledcSetup(LEDC_CHANNEL_0, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);
+    ledcAttachPin(LCD_BACK_LIGHT_PIN, LEDC_CHANNEL_0);
 }
 
 void display_clearScreen()
@@ -134,12 +149,12 @@ void display_drawMainVolume()
     sprite.setTextDatum(MC_DATUM);
     sprite.setFreeFont(FSS9);
     sprite.drawRect(0, 0, 26, 176, TFT_WHITE);
-    if (config.audio_Volume > 0)
+    if (config.display_brightness > 0)
     {
-        int volHeight = ((15 - config.audio_Volume) * (174 / 15));
+        int volHeight = ((10 - config.display_brightness) * (174 / 10));
         sprite.fillRect(2, volHeight + 2, 22, 172 - volHeight, TFT_DARKGREY);
     }
-    sprite.drawCentreString("15", 11, 5, GFXFF);
+    sprite.drawCentreString("10", 11, 5, GFXFF);
     sprite.drawCentreString("0", 12, 155, GFXFF);
     sprite.pushSprite(0, 25);
     sprite.deleteSprite();
@@ -148,7 +163,7 @@ void display_drawMainVolume()
 void display_drawTime()
 {
 
-    //struct tm timeinfo;
+    // struct tm timeinfo;
 
     getLocalTime(&timeinfo);
 

@@ -8,6 +8,7 @@
 extern TFT_eSPI tft;
 extern TFT_eSprite sprite;
 
+void display_adjustBacklight(uint32_t value, uint32_t valueMax = 10);
 void display_initialize();
 void display_clearScreen();
 void display_drawWiFi();

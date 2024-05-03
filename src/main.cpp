@@ -13,8 +13,9 @@
 bool userAuthenticated = false;
 
 bool menu_change = true;
-bool volume_change = true;
+bool brightness_change = true;
 bool button_change = true;
+bool new_message = false;
 int page = 0;
 
 // Timer
@@ -167,10 +168,6 @@ void loop()
     {
       display_getAuthToken();
     }
-    else
-    {
-      display_teamsMessage();
-    }
     oldTime_display_drawWiFi = millis();
   }
 
@@ -201,16 +198,22 @@ void loop()
       menu_change = false;
     }
 
-    if (volume_change)
+    if (brightness_change)
     {
       display_drawMainVolume();
-      volume_change = false;
+      display_adjustBacklight(config.display_brightness);
+      brightness_change = false;
     }
 
     if (button_change)
     {
       display_drawMainButtons();
       button_change = false;
+    }
+    if (new_message)
+    {
+      display_teamsMessage();
+      new_message = false;
     }
     break;
 

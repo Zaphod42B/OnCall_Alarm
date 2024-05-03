@@ -4,7 +4,7 @@
 // Initialize Config
 typedef struct
 {
-  int audio_Volume = 10;
+  int display_brightness = 10;
   int is_Armed = true;
 } Config;
 

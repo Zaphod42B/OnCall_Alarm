@@ -208,22 +208,25 @@ void graph_pollTeamsChannel(void *parameter)
         Serial.print("Getting last Message from Teams-Channel... ");
         if (httpResponseCode != 200)
         {
-            Serial.printf("[ERROR]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
+            Serial.printf("[ERROR]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
             Serial.println(http.getString());
             http.end();
         }
 
-        Serial.printf("[SUCCESS]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
+        Serial.printf("[Done]\n   --> HTTP-Response: %i\n", httpResponseCode);
         graph_deserializeTeamsMsg();
         http.end();
-
-        Serial.print("[ID]: ");
-        Serial.println(String(teamsMsg.Id));
-        Serial.print("[Created]: ");
-        Serial.println(String(teamsMsg.createdDateTime));
-        Serial.print("[Subject]: ");
-        Serial.println(teamsMsg.subject);
-        Serial.printf("[Message]: %s\n\n", teamsMsg.body);
+        if (new_message)
+        {
+            Serial.printf("   --> New Message received:\n");
+            Serial.printf("      --> [ID]: %s\n", String(teamsMsg.Id));
+            Serial.printf("      --> [Created]: %s\n", teamsMsg.createdDateTime);
+            Serial.printf("      --> [Subject]: %s\n\n", teamsMsg.subject);
+        }
+        else
+        {
+            Serial.printf("   --> No new Message.\n\n");
+        }
 
         xSemaphoreGive(sem);
         delay(TEAMS_POLLING_INTERVALL);
@@ -246,9 +249,13 @@ void graph_deserializeTeamsMsg()
 
     JsonObject msgIndex = msgArray["value"][0];
 
-    teamsMsg.lastPoll = millis();
-    teamsMsg.Id = msgIndex["id"].as<unsigned long long>();
-    strlcpy(teamsMsg.createdDateTime, msgIndex["createdDateTime"], sizeof(teamsMsg.createdDateTime));
-    strlcpy(teamsMsg.subject, msgIndex["subject"], sizeof(teamsMsg.subject));
-    strlcpy(teamsMsg.body, msgIndex["body"]["content"], sizeof(teamsMsg.body));
+    if (teamsMsg.Id < msgIndex["id"].as<unsigned long long>())
+    {
+        teamsMsg.lastPoll = millis();
+        teamsMsg.Id = msgIndex["id"].as<unsigned long long>();
+        strlcpy(teamsMsg.createdDateTime, msgIndex["createdDateTime"], sizeof(teamsMsg.createdDateTime));
+        strlcpy(teamsMsg.subject, msgIndex["subject"], sizeof(teamsMsg.subject));
+        strlcpy(teamsMsg.body, msgIndex["body"]["content"], sizeof(teamsMsg.body));
+        new_message = true;
+    }
 }
