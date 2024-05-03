@@ -43,4 +43,3 @@ void time_update()
     Serial.printf("Time: %s\n", time_string);
     Serial.printf("Date: %s\n\n", date_string);
 }
-

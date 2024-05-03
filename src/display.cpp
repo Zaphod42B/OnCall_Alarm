@@ -1,10 +1,9 @@
 #include <TFT_eSPI.h>
+#include <WiFi.h>
 
 #include "Main.h"
 #include "Extern.h"
 #include "Display.h"
-#include "Helper.h"
-
 #include "Helper.h"
 
 TFT_eSPI tft = TFT_eSPI();
@@ -30,7 +29,7 @@ void display_clearScreen()
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
 }
 
-void display_drawWiFi(int RSSI, const char *wifiName)
+void display_drawWiFi()
 {
     sprite.setColorDepth(8);
     sprite.createSprite(215, 25);
@@ -39,6 +38,7 @@ void display_drawWiFi(int RSSI, const char *wifiName)
     sprite.setTextDatum(TL_DATUM);
 
     uint16_t signalColor = TFT_GREEN;
+    int RSSI = WiFi.RSSI();
 
     if (RSSI <= -80)
     {
@@ -47,7 +47,7 @@ void display_drawWiFi(int RSSI, const char *wifiName)
 
     int start_x = 2;
     char temp[32];
-    sprintf(temp, "%i dBm | %s", RSSI, wifiName);
+    sprintf(temp, "%i dBm | %s", RSSI, WiFi.SSID().c_str());
 
     sprite.drawString(temp, start_x + 24, 4, 2);
 
@@ -158,7 +158,7 @@ void display_drawTime()
     char time_string[6];
     char date_string[35];
     strftime(time_string, 6, "%H:%M", &timeinfo);
-    strftime(date_string, 255, "%d. %b. %Y", &timeinfo);
+    strftime(date_string, 255, "%d.%m.%Y", &timeinfo);
 
     tft.setTextFont(1);
     tft.drawString(date_string, 318, 4, 2);
@@ -171,5 +171,53 @@ void display_drawTime()
     sprite.setFreeFont(FSSB12);
     sprite.drawString(time_string, 60, 0, GFXFF);
     sprite.pushSprite(258, 30);
+    sprite.deleteSprite();
+}
+
+void display_getAuthToken()
+{
+    sprite.setColorDepth(8);
+    sprite.createSprite(285, 105);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
+    sprite.setTextFont(2);
+    sprite.setTextSize(1);
+
+    sprite.setCursor(0, 5);
+    sprite.println(String(deviceAuth.message));
+    sprite.println();
+    sprite.print("Time left: ");
+    sprite.print(String((deviceAuth.token_request_millis / 1000 + deviceAuth.expires_in) - millis() / 1000));
+    sprite.print(" sec.");
+
+    sprite.pushSprite(30, 60);
+    sprite.deleteSprite();
+}
+
+void display_teamsMessage()
+{
+    sprite.setColorDepth(8);
+    sprite.createSprite(220, 30);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
+    sprite.setFreeFont(FSSB18);
+    sprite.drawString(teamsMsg.subject, 0, 0, GFXFF);
+    sprite.pushSprite(30, 30);
+    sprite.deleteSprite();
+
+    sprite.setColorDepth(8);
+    sprite.createSprite(285, 105);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
+    sprite.setTextFont(2);
+
+    sprite.setCursor(0, 5);
+    sprite.println(teamsMsg.body);
+    sprite.println(String((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000));
+
+    sprite.pushSprite(30, 60);
     sprite.deleteSprite();
 }

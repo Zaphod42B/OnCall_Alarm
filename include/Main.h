@@ -11,6 +11,16 @@ typedef struct
 typedef struct
 {
   u_long token_request_millis = 0; // Timestamp when token was requested
+  int expires_in = 0;
+  int interval;
+  char device_code[1024];
+  char user_code[16];
+  char message[128];
+} DeviceAuth;
+
+typedef struct
+{
+  u_long token_request_millis = 0; // Timestamp when token was requested
   char token_type[32];
   const char scope[64] = "User.Read offline_access ChannelMessage.Read.All";
   int expires_in = 0;

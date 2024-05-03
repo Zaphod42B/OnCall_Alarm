@@ -17,10 +17,12 @@ int page = 0;
 
 // Timer
 #define TIMER_DRAW_WIFI 5000
-u_long oldTime_display_drawWiFi = 0;
+u_long oldTime_display_drawWiFi = TIMER_DRAW_WIFI; // Time between WiFi and Time refresh in display in ms
 
 #define TIMER_TIME_UPDATE 60000
-u_long oldTime_time_update = 0;
+u_long oldTime_time_update = TIMER_TIME_UPDATE; // Time between polling NTP-Server in ms
+
+SemaphoreHandle_t sem; // Create semaphore handle
 
 // Initialize Audio
 // Audio audio(true, I2S_DAC_CHANNEL_LEFT_EN);
@@ -69,6 +71,45 @@ void setup()
   webconf_init();
   graph_loadReauthToken();
 
+  sem = xSemaphoreCreateBinary(); // Create binary semaphore
+  xSemaphoreGive(sem);
+
+  // Start task for Auth Token refresh
+  if (xTaskCreatePinnedToCore(
+          graph_checkAuthToken, // Function name of the task
+          "CheckAuthToken",     // Name of the task (e.g. for debugging)
+          30000,                // Stack size (bytes)
+          NULL,                 // Parameter to pass
+          1,                    // Task priority
+          NULL,                 // Task handle
+          1                     // Run on Core 1
+          ))
+  {
+    Serial.println("Refresh task for Auth Token started!");
+  }
+  else
+  {
+    Serial.println("Error starting refres task for Auth Token!");
+  }
+
+  // Start Teams polling
+  if (xTaskCreatePinnedToCore(
+          graph_pollTeamsChannel, // Function name of the task
+          "PollTeamsChannel",     // Name of the task (e.g. for debugging)
+          40000,                  // Stack size (bytes)
+          NULL,                   // Parameter to pass
+          1,                      // Task priority
+          NULL,                   // Task handle
+          1                       // Run on Core 1
+          ))
+  {
+    Serial.println("Teams polling startet successfully!");
+  }
+  else
+  {
+    Serial.println("Error starting Teams polling!");
+  }
+
   // Configure Timer0 Interrupt
   Timer0_Cfg = timerBegin(0, 80, true);
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
@@ -82,11 +123,6 @@ void loop()
 
   touch_newPoint();
 
-  if (iotWebConf.getState() == 4)
-  {
-    graph_checkAuthToken();
-  }
-
   // Update Time from NTP every 60 seconds
   if (millis() - oldTime_time_update >= TIMER_TIME_UPDATE)
   {
@@ -94,7 +130,6 @@ void loop()
     {
       time_update();
       oldTime_time_update = millis();
-      graph_pollTeamsChannel();
     }
   }
 
@@ -103,12 +138,9 @@ void loop()
   {
     if (iotWebConf.getState() == 4)
     {
-      display_drawWiFi(WiFi.RSSI(), WiFi.SSID().c_str());
+      display_drawWiFi();
       display_drawTime();
-    }
-    else if (iotWebConf.getState() == 2)
-    {
-      Serial.println("In Config Mode...");
+      display_teamsMessage();
     }
     oldTime_display_drawWiFi = millis();
   }

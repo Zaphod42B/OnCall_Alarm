@@ -3,12 +3,19 @@
 #include "Extern.h"
 #include "Display.h"
 
+#define TEAMS_POLLING_INTERVALL 60000
+
 HTTPClient http;
 
 AuthToken authToken;
 TeamsMsg teamsMsg;
+DeviceAuth deviceAuth;
 
-#define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.75) * 1000 //
+String graphEndpoint;
+String httpRequestData;
+String httpHeader;
+
+#define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.90) * 1000 //
 
 void graph_loadReauthToken()
 {
@@ -17,8 +24,8 @@ void graph_loadReauthToken()
 
 void graph_getAuthToken()
 {
-    String graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/devicecode";
-    String httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope;
+    graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/devicecode";
+    httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope;
 
     http.begin(graphEndpoint);
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -28,19 +35,19 @@ void graph_getAuthToken()
     Serial.print("Device Authorization... ");
     if (httpResponseCode != 200)
     {
-        Serial.printf("[ERROR] HTTP-Response: %i\n", httpResponseCode);
+        Serial.printf("[ERROR]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
         Serial.println(http.getString());
         http.end();
         return;
     }
 
-    Serial.printf("[SUCCESS] HTTP-Response: %i\n", httpResponseCode);
+    Serial.printf("[SUCCESS]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
 
     // Allocate the JSON document
-    JsonDocument deviceAuth;
+    JsonDocument doc;
 
     // Parse JSON object
-    DeserializationError error = deserializeJson(deviceAuth, http.getString());
+    DeserializationError error = deserializeJson(doc, http.getString());
     if (error)
     {
         Serial.print(F("deserializeJson() failed: "));
@@ -50,16 +57,29 @@ void graph_getAuthToken()
     }
     http.end();
 
-    Serial.println(deviceAuth["message"].as<String>());
+    deviceAuth.token_request_millis = millis();
+    deviceAuth.expires_in = doc["expires_in"];
+    deviceAuth.interval = doc["interval"];
+    strlcpy(deviceAuth.device_code, doc["device_code"], sizeof(deviceAuth.device_code));
+    strlcpy(deviceAuth.user_code, doc["user_code"], sizeof(deviceAuth.user_code));
+    strlcpy(deviceAuth.message, doc["message"], sizeof(deviceAuth.message));
+
+    doc.clear();
+
+    Serial.println(String(deviceAuth.message));
     Serial.print("Waiting for User Authorization...");
 
     bool userAuthenticated = false;
     while (!userAuthenticated)
     {
-        delay(deviceAuth["interval"].as<int>() * 1000);
+        display_getAuthToken();
+        display_drawTime();
+        display_drawWiFi();
+
+        delay(deviceAuth.interval * 1000);
 
         String graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
-        String httpRequestData = "grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=" + String(string_teams_AppID) + "&device_code=" + deviceAuth["device_code"].as<String>();
+        String httpRequestData = "grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=" + String(string_teams_AppID) + "&device_code=" + String(deviceAuth.device_code);
 
         http.begin(graphEndpoint);
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -83,7 +103,7 @@ void graph_getAuthToken()
         {
             Serial.print(".");
         }
-        else
+        else if (userAuth["error"].as<String>().compareTo("null") == 0)
         {
             Serial.println("[SUCCESS]");
             userAuthenticated = true;
@@ -96,14 +116,19 @@ void graph_getAuthToken()
             strlcpy(string_reauthToken, authToken.refresh_token, sizeof(authToken.refresh_token));
             iotWebConf.saveConfig();
         }
-        http.end();
+        else
+        {
+            userAuth.clear();
+            return;
+        }
+        userAuth.clear();
     }
 }
 
 bool graph_reAuthToken()
 {
-    String graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
-    String httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope + "&refresh_token=" + authToken.refresh_token + "&grant_type=refresh_token";
+    graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
+    httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope + "&refresh_token=" + authToken.refresh_token + "&grant_type=refresh_token";
 
     http.begin(graphEndpoint);
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -113,13 +138,13 @@ bool graph_reAuthToken()
     Serial.print("Refreshing Auth Token... ");
     if (httpResponseCode != 200)
     {
-        Serial.printf("[ERROR] HTTP-Response: %i\n", httpResponseCode);
+        Serial.printf("[ERROR]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
         Serial.println(http.getString());
         http.end();
         return false;
     }
 
-    Serial.printf("[SUCCESS] HTTP-Response: %i\n", httpResponseCode);
+    Serial.printf("[SUCCESS]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
 
     // Allocate the JSON document
     JsonDocument doc;
@@ -140,44 +165,73 @@ bool graph_reAuthToken()
     strlcpy(authToken.access_token, doc["access_token"], sizeof(authToken.access_token));
     strlcpy(authToken.refresh_token, doc["refresh_token"], sizeof(authToken.refresh_token));
     strlcpy(string_reauthToken, authToken.refresh_token, sizeof(authToken.refresh_token));
-    iotWebConf.saveConfig();
+    // iotWebConf.saveConfig();
 
     http.end();
 
     return true;
 }
 
-void graph_checkAuthToken()
+void graph_checkAuthToken(void *parameter)
 {
-    if (authToken.token_request_millis + TOKEN_MIN_LIFETIME < millis())
+    while (true)
     {
+        xSemaphoreTake(sem, portMAX_DELAY);
+        while (iotWebConf.getState() != 4)
+        {
+            Serial.println("Waiting for network connection before starting Auth-Token refreshing Task...");
+            delay(5000);
+        }
         if (!graph_reAuthToken())
         {
             graph_getAuthToken();
         }
+        xSemaphoreGive(sem);
+        delay(TOKEN_MIN_LIFETIME);
     }
 }
 
-void graph_pollTeamsChannel()
+void graph_pollTeamsChannel(void *parameter)
 {
-    String graphEndpoint = "https://graph.microsoft.com/v1.0/teams/" + String(string_teams_TeamID) + "/channels/" + String(string_teams_ChannelID) + "/messages?top=1";
-
-    http.begin(graphEndpoint);
-    http.addHeader("Authorization", "Bearer " + String(authToken.access_token));
-
-    int httpResponseCode = http.GET();
-
-    Serial.print("Getting last Message from Teams-Channel... ");
-    if (httpResponseCode != 200)
+    while (true)
     {
-        Serial.printf("[ERROR] HTTP-Response: %i\n", httpResponseCode);
-        Serial.println(http.getString());
+        xSemaphoreTake(sem, portMAX_DELAY);
+        graphEndpoint = "https://graph.microsoft.com/v1.0/teams/" + String(string_teams_TeamID) + "/channels/" + String(string_teams_ChannelID) + "/messages?top=1";
+        httpHeader = "Bearer " + String(authToken.access_token);
+
+        http.begin(graphEndpoint);
+        http.addHeader("Authorization", httpHeader);
+
+        int httpResponseCode = http.GET();
+
+        Serial.print("Getting last Message from Teams-Channel... ");
+        if (httpResponseCode != 200)
+        {
+            Serial.printf("[ERROR]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
+            Serial.println(http.getString());
+            http.end();
+        }
+
+        Serial.printf("[SUCCESS]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
+        graph_deserializeTeamsMsg();
         http.end();
-        return;
+
+        Serial.print("[ID]: ");
+        Serial.println(String(teamsMsg.Id));
+        Serial.print("[Created]: ");
+        Serial.println(String(teamsMsg.createdDateTime));
+        Serial.print("[Subject]: ");
+        Serial.println(teamsMsg.subject);
+        Serial.print("[Message]: ");
+        Serial.println(teamsMsg.body);
+
+        xSemaphoreGive(sem);
+        delay(TEAMS_POLLING_INTERVALL);
     }
+}
 
-    Serial.printf("[SUCCESS] HTTP-Response: %i\n", httpResponseCode);
-
+void graph_deserializeTeamsMsg()
+{
     // Allocate the JSON document
     JsonDocument msgArray;
 
@@ -187,48 +241,14 @@ void graph_pollTeamsChannel()
     {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
-        http.end();
         return;
     }
-    http.end();
 
     JsonObject msgIndex = msgArray["value"][0];
 
     teamsMsg.lastPoll = millis();
-    teamsMsg.Id = msgIndex["id"].as<int>();
+    teamsMsg.Id = msgIndex["id"].as<unsigned long long>();
+    strlcpy(teamsMsg.createdDateTime, msgIndex["createdDateTime"], sizeof(teamsMsg.createdDateTime));
     strlcpy(teamsMsg.subject, msgIndex["subject"], sizeof(teamsMsg.subject));
-    strlcpy(teamsMsg.body, msgIndex["body"]["content"], sizeof(teamsMsg.subject));
-
-    Serial.print("ID: ");
-    Serial.println(teamsMsg.Id);
-    Serial.print("Created: ");
-    Serial.println(teamsMsg.createdDateTime);
-    Serial.print("Subject: ");
-    Serial.println(teamsMsg.subject);
-    Serial.print("Message: ");
-    Serial.println(teamsMsg.body);
-
-    sprite.setColorDepth(8);
-    sprite.createSprite(220, 30);
-    sprite.fillSprite(TFT_BLACK);
-    sprite.setTextColor(TFT_WHITE);
-    sprite.setTextDatum(TL_DATUM);
-    sprite.setFreeFont(FSSB18);
-    sprite.drawString(teamsMsg.subject, 0, 0, GFXFF);
-    sprite.pushSprite(30, 30);
-    sprite.deleteSprite();
-
-    sprite.setColorDepth(8);
-    sprite.createSprite(285, 105);
-    sprite.fillSprite(TFT_BLACK);
-    sprite.setTextColor(TFT_WHITE);
-    sprite.setTextDatum(TL_DATUM);
-    sprite.setTextFont(2);
-
-    sprite.setCursor(0, 5);
-    sprite.println(teamsMsg.body);
-    sprite.println(String((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000));
-
-    sprite.pushSprite(30, 60);
-    sprite.deleteSprite();
+    strlcpy(teamsMsg.body, msgIndex["body"]["content"], sizeof(teamsMsg.body));
 }
