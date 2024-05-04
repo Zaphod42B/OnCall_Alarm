@@ -133,13 +133,13 @@ bool graph_reAuthToken()
     Serial.print("Refreshing Auth Token... ");
     if (httpResponseCode != 200)
     {
-        Serial.printf("[ERROR]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
+        Serial.printf("[ERROR]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
         Serial.println(http.getString());
         http.end();
         return false;
     }
 
-    Serial.printf("[SUCCESS]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
+    Serial.printf("[SUCCESS]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
 
     // Allocate the JSON document
     JsonDocument doc;

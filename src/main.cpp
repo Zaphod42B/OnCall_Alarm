@@ -180,7 +180,7 @@ void loop()
   // Run every 5 Minutes
   if (millis() - old_timer_5_minutes >= TIMER_5_MINUTES)
   {
-    Serial.println("[Memory High Watermark from Tasks]");
+    Serial.println("Memory High Watermark from Tasks");
     Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollNtp), uxTaskGetStackHighWaterMark(PollNtp));
     Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(CheckAuthToken), uxTaskGetStackHighWaterMark(CheckAuthToken));
     Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(PollTeamsChannel), uxTaskGetStackHighWaterMark(PollTeamsChannel));

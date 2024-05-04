@@ -47,13 +47,15 @@ void touch_newPoint()
             touch_x = (p.x - TOUCH_X_MIN) * (340 - 0) / (TOUCH_X_MAX - TOUCH_X_MIN);
             touch_y = (p.y - TOUCH_Y_MIN) * (240 - 0) / (TOUCH_Y_MAX - TOUCH_Y_MIN);
 
-            Serial.print("Pressure = ");
-            Serial.print(p.z);
-            Serial.print(", x = ");
-            Serial.print(touch_x);
-            Serial.print(", y = ");
-            Serial.print(touch_y);
-            Serial.println();
+            Serial.println("Touch detected");
+            Serial.printf("   --> x = %i | y = %i | pressure: %i\n\n", touch_x, touch_y, p.z);
+
+            if (config.display_brightness == 0)
+            {
+                config.display_brightness++;
+                brightness_change = true;
+                return;
+            }
 
             // Button "-"
             if (touch_x >= 0 && touch_x <= 50 && touch_y >= 200 && touch_y <= 240)
