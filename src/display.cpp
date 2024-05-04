@@ -114,11 +114,14 @@ void display_drawMainButtons()
     tft.drawString("+", 74, HEIGHT - 25, GFXFF);
 
     // Right
+    /*
     tft.setFreeFont(FSSB9);
     tft.fillRect(WIDTH - 100, HEIGHT - 39, 100, 39, TFT_DARKGREY);
     tft.drawString("MENU", WIDTH - 49, HEIGHT - 21, GFXFF);
+    */
 
     // Middle
+    tft.setFreeFont(FSSB9);
     tft.setTextColor(TFT_BLACK);
     if (config.is_Armed == 1)
     {
@@ -162,9 +165,6 @@ void display_drawMainVolume()
 
 void display_drawTime()
 {
-
-    // struct tm timeinfo;
-
     getLocalTime(&timeinfo);
 
     tft.setTextColor(TFT_WHITE, TFT_BLACK, true);
@@ -219,7 +219,7 @@ void display_teamsMessage()
     sprite.setTextDatum(TL_DATUM);
     sprite.setFreeFont(FSSB18);
     sprite.drawString(teamsMsg.subject, 0, 0, GFXFF);
-    sprite.pushSprite(30, 30);
+    sprite.pushSprite(30, 31);
     sprite.deleteSprite();
 
     sprite.setColorDepth(8);
@@ -228,11 +228,52 @@ void display_teamsMessage()
     sprite.setTextColor(TFT_WHITE);
     sprite.setTextDatum(TL_DATUM);
     sprite.setTextFont(2);
+    sprite.setTextWrap(true, true);
 
     sprite.setCursor(0, 5);
     sprite.println(teamsMsg.body);
-    sprite.println(String((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000));
 
     sprite.pushSprite(30, 60);
+    sprite.deleteSprite();
+}
+
+void display_drawPollTimers()
+{
+    sprite.setColorDepth(8);
+    sprite.createSprite(99, 38);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
+    sprite.setTextFont(2);
+    sprite.setCursor(0, 3);
+    if (((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000) > 0)
+    {
+        sprite.setTextColor(TFT_GREEN);
+    }
+    else
+    {
+        sprite.setTextColor(TFT_RED);
+    }
+    sprite.printf(" Token: %i\n", ((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000));
+
+    if ((millis() - teamsMsg.lastPoll) / 1000 <= 20)
+    {
+        sprite.setTextColor(TFT_GREEN);
+    }
+    else
+    {
+        sprite.setTextColor(TFT_RED);
+    }
+
+    if ((millis() - shift.lastPoll) / 1000 <= 20)
+    {
+        sprite.setTextColor(TFT_GREEN);
+    }
+    else
+    {
+        sprite.setTextColor(TFT_RED);
+    }
+    sprite.printf(" T: %i | S: %i", (millis() - teamsMsg.lastPoll) / 1000, (millis() - shift.lastPoll) / 1000);
+    sprite.pushSprite(220, 201);
     sprite.deleteSprite();
 }

@@ -11,5 +11,7 @@ bool graph_reAuthToken();
 void graph_checkAuthToken(void *parameter);
 void graph_pollTeamsChannel(void *parameter);
 void graph_deserializeTeamsMsg();
+void graph_pollShifts(void *parameter);
+void graph_deserializeShifts();
 
 #endif

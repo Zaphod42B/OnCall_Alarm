@@ -16,9 +16,13 @@ bool menu_change = true;
 bool brightness_change = true;
 bool button_change = true;
 bool new_message = false;
+bool new_shift = false;
 int page = 0;
 
 // Timer
+#define TIMER_1_SECONDS 1000
+u_long old_timer_1_seconds = TIMER_1_SECONDS;
+
 #define TIMER_DRAW_WIFI 5000
 u_long oldTime_display_drawWiFi = TIMER_DRAW_WIFI; // Time between WiFi and Time refresh in display in ms
 
@@ -35,6 +39,7 @@ SemaphoreHandle_t sem;
 TaskHandle_t PollNtp;
 TaskHandle_t CheckAuthToken;
 TaskHandle_t PollTeamsChannel;
+TaskHandle_t PollShifts;
 
 // Create timeinfo handle
 tm timeinfo;
@@ -125,6 +130,24 @@ void setup()
     Serial.println("Error starting Teams polling!");
   }
 
+  // Start Shifts polling
+  if (xTaskCreatePinnedToCore(
+          graph_pollShifts, // Function name of the task
+          "PollShifts",     // Name of the task (e.g. for debugging)
+          4096,             // Stack size (bytes)
+          NULL,             // Parameter to pass
+          1,                // Task priority
+          &PollShifts,      // Task handle
+          1                 // Run on Core 1
+          ))
+  {
+    Serial.println("Shifts polling startet successfully!");
+  }
+  else
+  {
+    Serial.println("Error starting Shifts polling!");
+  }
+
   // Start NTP polling
   if (xTaskCreatePinnedToCore(
           time_update, // Function name of the task
@@ -156,6 +179,13 @@ void loop()
 
   touch_newPoint();
 
+  // Run every 1 Seconds
+  if (millis() - old_timer_1_seconds >= TIMER_1_SECONDS)
+  {
+    display_drawPollTimers();
+    old_timer_1_seconds = millis();
+  }
+
   // Draw WiFi and Time every 5 seconds
   if (millis() - oldTime_display_drawWiFi >= TIMER_DRAW_WIFI)
   {
@@ -183,7 +213,8 @@ void loop()
     Serial.println("Memory High Watermark from Tasks");
     Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollNtp), uxTaskGetStackHighWaterMark(PollNtp));
     Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(CheckAuthToken), uxTaskGetStackHighWaterMark(CheckAuthToken));
-    Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(PollTeamsChannel), uxTaskGetStackHighWaterMark(PollTeamsChannel));
+    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollTeamsChannel), uxTaskGetStackHighWaterMark(PollTeamsChannel));
+    Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(PollShifts), uxTaskGetStackHighWaterMark(PollShifts));
     old_timer_5_minutes = millis();
   }
 

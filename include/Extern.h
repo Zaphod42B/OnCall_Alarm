@@ -10,6 +10,7 @@ extern bool brightness_change;
 extern bool menu_change;
 extern bool button_change;
 extern bool new_message;
+extern bool new_shift;
 extern int page;
 extern bool userAuthenticated;
 
@@ -19,5 +20,6 @@ extern Config config;
 extern AuthToken authToken;
 extern TeamsMsg teamsMsg;
 extern DeviceAuth deviceAuth;
+extern Shift shift;
 
 #endif

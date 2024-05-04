@@ -19,5 +19,5 @@ void display_drawTime();
 void display_pollTimer();
 void display_getAuthToken();
 void display_teamsMessage();
-
+void display_drawPollTimers();
 #endif

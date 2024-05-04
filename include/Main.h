@@ -22,7 +22,7 @@ typedef struct
 {
   u_long token_request_millis = 0; // Timestamp when token was requested
   char token_type[32];
-  const char scope[64] = "User.Read offline_access ChannelMessage.Read.All";
+  const char scope[67] = "User.Read offline_access ChannelMessage.Read.All Schedule.Read.All";
   int expires_in = 0;
   char access_token[4096];
   char refresh_token[2048];
@@ -36,5 +36,14 @@ typedef struct
   char body[512];
   char createdDateTime[32];
 } TeamsMsg;
+
+typedef struct
+{
+  u_long lastPoll = 0;
+  char id[64];
+  char userId[64] = "543e9206-a5ff-4c1e-85fc-744b0ce5c82b";
+  time_t t_startDateTime;
+  time_t t_endDateTime;
+} Shift;
 
 #endif

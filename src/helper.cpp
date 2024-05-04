@@ -8,7 +8,7 @@
 // ### Time #########################
 // ##################################
 
-#define NTP_POLLING_INTERVAL 60000 + rand() % 10000
+#define NTP_POLLING_INTERVAL 300000 + rand() % 10000
 
 const char *timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
 
@@ -24,8 +24,7 @@ void time_update(void *parameter)
         xSemaphoreTake(sem, portMAX_DELAY);
         configTime(0, 0, "pool.ntp.org");
 
-        setenv("TZ", timezone, 1); //  Now adjust the TZ. Clock settings are adjusted to show the new local time
-        tzset();
+        time_setTimezone();
 
         Serial.printf("Get time from pool.ntp.org... ");
         if (!getLocalTime(&timeinfo))
@@ -49,4 +48,10 @@ void time_update(void *parameter)
 
         delay(NTP_POLLING_INTERVAL);
     }
+}
+
+void time_setTimezone()
+{
+    setenv("TZ", timezone, 1); //  Now adjust the TZ. Clock settings are adjusted to show the new local time
+    tzset();
 }

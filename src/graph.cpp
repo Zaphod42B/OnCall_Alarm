@@ -1,11 +1,15 @@
 #include <regex>
+#include <time.h>
 
 #include "Graph.h"
 #include "WebConf.h"
 #include "Extern.h"
 #include "Display.h"
+#include "Helper.h"
 
-#define TEAMS_POLLING_INTERVALL 60000
+#define TEAMS_POLLING_INTERVALL 10000
+#define SHIFTS_POLLING_INTERVALL 10000
+
 #define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.75) * 1000 //
 
 HTTPClient http;
@@ -13,10 +17,14 @@ HTTPClient http;
 AuthToken authToken;
 TeamsMsg teamsMsg;
 DeviceAuth deviceAuth;
+Shift shift;
 
 String graphEndpoint;
 String httpRequestData;
 String httpHeader;
+
+char shifts_Start_Time[32];
+char shifts_End_Time[32];
 
 void graph_loadReauthToken()
 {
@@ -214,20 +222,23 @@ void graph_pollTeamsChannel(void *parameter)
             Serial.println(http.getString());
             http.end();
         }
-
-        Serial.printf("[Done]\n   --> HTTP-Response: %i\n", httpResponseCode);
-        graph_deserializeTeamsMsg();
-        http.end();
-        if (new_message)
-        {
-            Serial.printf("   --> New Message received:\n");
-            Serial.printf("      --> [ID]: %s\n", String(teamsMsg.Id));
-            Serial.printf("      --> [Created]: %s\n", teamsMsg.createdDateTime);
-            Serial.printf("      --> [Subject]: %s\n\n", teamsMsg.subject);
-        }
         else
         {
-            Serial.printf("   --> No new Message.\n\n");
+            Serial.printf("[Done]\n   --> HTTP-Response: %i\n", httpResponseCode);
+            teamsMsg.lastPoll = millis();
+            graph_deserializeTeamsMsg();
+            http.end();
+            if (new_message)
+            {
+                Serial.printf("   --> New Message received:\n");
+                Serial.printf("      --> [ID]: %s\n", String(teamsMsg.Id));
+                Serial.printf("      --> [Created]: %s\n", teamsMsg.createdDateTime);
+                Serial.printf("      --> [Subject]: %s\n\n", teamsMsg.subject);
+            }
+            else
+            {
+                Serial.printf("   --> No new Message.\n\n");
+            }
         }
 
         xSemaphoreGive(sem);
@@ -253,7 +264,6 @@ void graph_deserializeTeamsMsg()
 
     if (teamsMsg.Id < msgIndex["id"].as<unsigned long long>())
     {
-        teamsMsg.lastPoll = millis();
         teamsMsg.Id = msgIndex["id"].as<unsigned long long>();
         strlcpy(teamsMsg.createdDateTime, msgIndex["createdDateTime"], sizeof(teamsMsg.createdDateTime));
         strlcpy(teamsMsg.subject, msgIndex["subject"], sizeof(teamsMsg.subject));
@@ -267,4 +277,118 @@ void graph_deserializeTeamsMsg()
         strlcpy(teamsMsg.body, out.c_str(), sizeof(teamsMsg.body));
         new_message = true;
     }
+}
+
+void graph_pollShifts(void *parameter)
+{
+    time_t timevalue;
+    char dateTimeString[20];
+    while (true)
+    {
+        while (iotWebConf.getState() != 4)
+        {
+            delay(5000);
+        }
+        xSemaphoreTake(sem, portMAX_DELAY);
+
+        configTime(0, 0, "pool.ntp.org");
+        getLocalTime(&timeinfo);
+
+        timeinfo.tm_mday -= 1;
+        timevalue = mktime(&timeinfo);
+        timeinfo = *localtime(&timevalue);
+        strftime(shifts_Start_Time, sizeof(shifts_Start_Time), "%Y-%m-%dT%H:%M:00.000Z", &timeinfo);
+        timeinfo.tm_mday += 2;
+        timevalue = mktime(&timeinfo);
+        timeinfo = *localtime(&timevalue);
+        strftime(shifts_End_Time, sizeof(shifts_End_Time), "%Y-%m-%dT%H:%M:00.000Z", &timeinfo);
+        time_setTimezone();
+
+        graphEndpoint = "https://graph.microsoft.com/v1.0/teams/" + String(string_teams_TeamID) + "/schedule/shifts?$filter=sharedShift/startDateTime%20ge%20" + shifts_Start_Time + "%20and%20sharedShift/endDateTime%20le%20" + shifts_End_Time;
+        httpHeader = "Bearer " + String(authToken.access_token);
+
+        http.begin(graphEndpoint);
+        http.addHeader("Authorization", httpHeader);
+
+        int httpResponseCode = http.GET();
+
+        Serial.print("Getting Shifts from Teams-Channel... ");
+        if (httpResponseCode != 200)
+        {
+            Serial.printf("[ERROR]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
+            Serial.println(http.getString());
+            http.end();
+        }
+        else
+        {
+            Serial.printf("[Done]\n   --> HTTP-Response: %i\n", httpResponseCode);
+            shift.lastPoll = millis();
+            graph_deserializeShifts();
+            http.end();
+            if (config.is_Armed)
+            {
+                Serial.printf("   --> Active Shift\n");
+
+                timeinfo = *localtime(&shift.t_startDateTime);
+                strftime(dateTimeString, sizeof(dateTimeString), "%d.%m.%Y %H:%M", &timeinfo);
+                Serial.printf("      --> [Start]: %s\n", dateTimeString);
+
+                timeinfo = *localtime(&shift.t_endDateTime);
+                strftime(dateTimeString, sizeof(dateTimeString), "%d.%m.%Y %H:%M", &timeinfo);
+                Serial.printf("      --> [End]:   %s\n\n", dateTimeString);
+            }
+            else
+            {
+                Serial.printf("   --> No active Shift\n\n");
+            }
+        }
+        xSemaphoreGive(sem);
+        delay(SHIFTS_POLLING_INTERVALL);
+    }
+}
+
+void graph_deserializeShifts()
+{
+    // Allocate the JSON document
+    JsonDocument doc;
+
+    // Parse JSON object
+    DeserializationError error = deserializeJson(doc, http.getString());
+    if (error)
+    {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        return;
+    }
+
+    bool state = false;
+    configTime(0, 0, "pool.ntp.org");
+    for (JsonObject value : doc["value"].as<JsonArray>())
+    {
+        if (strcmp(value["userId"].as<const char *>(), shift.userId) == 0 && strcmp(value["id"].as<const char *>(), shift.id) != 0)
+        {
+            tm tm_startDateTime;
+            tm tm_endDateTime;
+            time_t startDateTime;
+            time_t endDateTime;
+            time_t currentTime;
+
+            strptime(value["sharedShift"]["startDateTime"].as<const char *>(), "%Y-%m-%dT%H:%M:%S", &tm_startDateTime);
+            strptime(value["sharedShift"]["endDateTime"].as<const char *>(), "%Y-%m-%dT%H:%M:%S", &tm_endDateTime);
+
+            startDateTime = mktime(&tm_startDateTime);
+            endDateTime = mktime(&tm_endDateTime);
+            currentTime = time(nullptr);
+
+            if (startDateTime <= currentTime && currentTime <= endDateTime)
+            {
+                state = true;
+                shift.t_startDateTime = startDateTime;
+                shift.t_endDateTime = endDateTime;
+            }
+        }
+    }
+    time_setTimezone();
+    config.is_Armed = state;
+    button_change = true;
 }

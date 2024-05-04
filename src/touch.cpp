@@ -54,6 +54,7 @@ void touch_newPoint()
             {
                 config.display_brightness++;
                 brightness_change = true;
+                is_touched = true;
                 return;
             }
 
