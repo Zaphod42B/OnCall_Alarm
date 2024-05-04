@@ -69,7 +69,7 @@ void touch_newPoint()
             // Button "+"
             else if (touch_x >= 51 && touch_x <= 100 && touch_y >= 200 && touch_y <= 240)
             {
-                if (config.display_brightness < 15)
+                if (config.display_brightness < 10)
                 {
                     config.display_brightness++;
                     brightness_change = true;

@@ -1,3 +1,5 @@
+#include <regex>
+
 #include "Graph.h"
 #include "WebConf.h"
 #include "Extern.h"
@@ -255,7 +257,14 @@ void graph_deserializeTeamsMsg()
         teamsMsg.Id = msgIndex["id"].as<unsigned long long>();
         strlcpy(teamsMsg.createdDateTime, msgIndex["createdDateTime"], sizeof(teamsMsg.createdDateTime));
         strlcpy(teamsMsg.subject, msgIndex["subject"], sizeof(teamsMsg.subject));
-        strlcpy(teamsMsg.body, msgIndex["body"]["content"], sizeof(teamsMsg.body));
+
+        // Remove HTML-Tags from body string
+        std::regex tags("<[^>]*>");
+        std::string remove{};
+        std::string out;
+        out = std::regex_replace(msgIndex["body"]["content"].as<std::string>(), tags, remove);
+
+        strlcpy(teamsMsg.body, out.c_str(), sizeof(teamsMsg.body));
         new_message = true;
     }
 }
