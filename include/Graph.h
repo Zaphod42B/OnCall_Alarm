@@ -2,7 +2,6 @@
 #define Graph_h
 
 #include <ArduinoJson.h>
-#include <WiFi.h>
 #include <HTTPClient.h>
 
 void graph_loadReauthToken();

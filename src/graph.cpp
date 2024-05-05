@@ -26,6 +26,8 @@ String httpHeader;
 char shifts_Start_Time[32];
 char shifts_End_Time[32];
 
+int httpResponseCode;
+
 void graph_loadReauthToken()
 {
     strlcpy(authToken.refresh_token, string_reauthToken, sizeof(string_reauthToken));
@@ -73,8 +75,6 @@ void graph_getAuthToken()
     strlcpy(deviceAuth.user_code, doc["user_code"], sizeof(deviceAuth.user_code));
     strlcpy(deviceAuth.message, doc["message"], sizeof(deviceAuth.message));
 
-    doc.clear();
-
     Serial.println(String(deviceAuth.message));
     Serial.printf("Waiting for User Authorization...");
 
@@ -83,8 +83,8 @@ void graph_getAuthToken()
     {
         delay(deviceAuth.interval * 1000);
 
-        String graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
-        String httpRequestData = "grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=" + String(string_teams_AppID) + "&device_code=" + String(deviceAuth.device_code);
+        graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
+        httpRequestData = "grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=" + String(string_teams_AppID) + "&device_code=" + String(deviceAuth.device_code);
 
         http.begin(graphEndpoint);
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -213,7 +213,7 @@ void graph_pollTeamsChannel(void *parameter)
         http.begin(graphEndpoint);
         http.addHeader("Authorization", httpHeader);
 
-        int httpResponseCode = http.GET();
+        httpResponseCode = http.GET();
 
         Serial.print("Getting last Message from Teams-Channel... ");
         if (httpResponseCode != 200)
@@ -310,7 +310,7 @@ void graph_pollShifts(void *parameter)
         http.begin(graphEndpoint);
         http.addHeader("Authorization", httpHeader);
 
-        int httpResponseCode = http.GET();
+        httpResponseCode = http.GET();
 
         Serial.print("Getting Shifts from Teams-Channel... ");
         if (httpResponseCode != 200)

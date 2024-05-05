@@ -91,6 +91,8 @@ void setup()
   webconf_init();
   graph_loadReauthToken();
 
+  time_prepareTimeZone();
+
   sem = xSemaphoreCreateBinary(); // Create binary semaphore
   xSemaphoreGive(sem);
 
@@ -182,6 +184,9 @@ void loop()
   // Run every 1 Seconds
   if (millis() - old_timer_1_seconds >= TIMER_1_SECONDS)
   {
+    multi_heap_info_t info;
+    heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    Serial.printf("   --> Total Free: %i Byte\n", info.total_free_bytes);
     display_drawPollTimers();
     old_timer_1_seconds = millis();
   }
@@ -204,17 +209,24 @@ void loop()
   // Run every 60 Seconds
   if (millis() - old_timer_60_seconds >= TIMER_60_SECONDS)
   {
+    multi_heap_info_t info;
+    heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    Serial.println("Memory ESP");
+    Serial.printf("   --> Total Free: %i Byte\n", info.total_free_bytes);
+    Serial.printf("   --> High watermark:   %i Byte\n", info.minimum_free_bytes);
+    Serial.printf("   --> Largest block:    %i Byte\n\n", info.largest_free_block);
+
+    Serial.println("Memory High Watermark from Tasks");
+    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollNtp), uxTaskGetStackHighWaterMark(PollNtp));
+    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(CheckAuthToken), uxTaskGetStackHighWaterMark(CheckAuthToken));
+    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollTeamsChannel), uxTaskGetStackHighWaterMark(PollTeamsChannel));
+    Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(PollShifts), uxTaskGetStackHighWaterMark(PollShifts));
     old_timer_60_seconds = millis();
   }
 
   // Run every 5 Minutes
   if (millis() - old_timer_5_minutes >= TIMER_5_MINUTES)
   {
-    Serial.println("Memory High Watermark from Tasks");
-    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollNtp), uxTaskGetStackHighWaterMark(PollNtp));
-    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(CheckAuthToken), uxTaskGetStackHighWaterMark(CheckAuthToken));
-    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollTeamsChannel), uxTaskGetStackHighWaterMark(PollTeamsChannel));
-    Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(PollShifts), uxTaskGetStackHighWaterMark(PollShifts));
     old_timer_5_minutes = millis();
   }
 

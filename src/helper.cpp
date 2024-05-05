@@ -10,7 +10,7 @@
 
 #define NTP_POLLING_INTERVAL 300000 + rand() % 10000
 
-const char *timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
+char *tzbuf_value;
 
 void time_update(void *parameter)
 {
@@ -50,8 +50,15 @@ void time_update(void *parameter)
     }
 }
 
+void time_prepareTimeZone()
+{
+    static char tzbuf[] = "TZ=Value_long_enough_for_any_we_want_to_set";
+    unsetenv("TZ");
+    putenv(tzbuf);
+    tzbuf_value = getenv("TZ");
+}
+
 void time_setTimezone()
 {
-    setenv("TZ", timezone, 1); //  Now adjust the TZ. Clock settings are adjusted to show the new local time
-    tzset();
+    strcpy(tzbuf_value, "CET-1CEST,M3.5.0,M10.5.0/3");
 }
