@@ -277,3 +277,29 @@ void display_drawPollTimers()
     sprite.pushSprite(220, 201);
     sprite.deleteSprite();
 }
+
+void display_drawUptime()
+{
+    sprite.setColorDepth(8);
+    sprite.createSprite(290, 15);
+    sprite.fillSprite(TFT_BLACK);
+    sprite.setTextColor(TFT_WHITE);
+    sprite.setTextDatum(TL_DATUM);
+    sprite.setTextFont(2);
+    sprite.setCursor(0, 0);
+
+    configTime(0, 0, "pool.ntp.org");
+    time_t timevalue = millis()/1000;
+    char uptime[16];
+    timeinfo = *localtime(&timevalue);
+    strftime(uptime, sizeof(uptime), "%H:%M:%S", &timeinfo);
+    time_setTimezone();
+
+    multi_heap_info_t info;
+    heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    //Serial.printf("--> Uptime: %s | Free Mem: %i\n", uptime, info.total_free_bytes);
+    sprite.printf("Uptime: %s | Free Mem: %i", uptime, info.total_free_bytes);
+
+    sprite.pushSprite(30, 180);
+    sprite.deleteSprite();
+}

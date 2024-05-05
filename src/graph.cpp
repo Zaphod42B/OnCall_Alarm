@@ -30,7 +30,9 @@ int httpResponseCode;
 
 void graph_loadReauthToken()
 {
-    strlcpy(authToken.refresh_token, string_reauthToken, sizeof(string_reauthToken));
+    strlcpy(authToken.refresh_token, string_refreshToken, sizeof(string_refreshToken));
+    authToken.refresh_token_lastSave = atoi(string_refreshToken_lastSave);
+    Serial.println(authToken.refresh_token_lastSave);
 }
 
 void graph_getAuthToken()
@@ -41,7 +43,7 @@ void graph_getAuthToken()
     http.begin(graphEndpoint);
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-    int httpResponseCode = http.POST(httpRequestData);
+    httpResponseCode = http.POST(httpRequestData);
 
     Serial.printf("\nDevice Authorization... ");
     if (httpResponseCode != 200)
@@ -89,7 +91,7 @@ void graph_getAuthToken()
         http.begin(graphEndpoint);
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-        int httpResponseCode = http.POST(httpRequestData);
+        httpResponseCode = http.POST(httpRequestData);
 
         // Allocate the JSON document
         JsonDocument userAuth;
@@ -118,7 +120,10 @@ void graph_getAuthToken()
             strlcpy(authToken.token_type, userAuth["token_type"], sizeof(authToken.token_type));
             strlcpy(authToken.access_token, userAuth["access_token"], sizeof(authToken.access_token));
             strlcpy(authToken.refresh_token, userAuth["refresh_token"], sizeof(authToken.refresh_token));
-            strlcpy(string_reauthToken, authToken.refresh_token, sizeof(authToken.refresh_token));
+            strlcpy(string_refreshToken, authToken.refresh_token, sizeof(authToken.refresh_token));
+
+            getLocalTime(&timeinfo);
+            ultoa(mktime(&timeinfo), string_refreshToken_lastSave, 10);
             iotWebConf.saveConfig();
         }
         else
@@ -138,7 +143,7 @@ bool graph_reAuthToken()
     http.begin(graphEndpoint);
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-    int httpResponseCode = http.POST(httpRequestData);
+    httpResponseCode = http.POST(httpRequestData);
 
     Serial.print("Refreshing Auth Token... ");
     if (httpResponseCode != 200)
@@ -149,7 +154,7 @@ bool graph_reAuthToken()
         return false;
     }
 
-    Serial.printf("[SUCCESS]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
+    Serial.printf("[Done]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
 
     // Allocate the JSON document
     JsonDocument doc;
@@ -169,8 +174,17 @@ bool graph_reAuthToken()
     strlcpy(authToken.token_type, doc["token_type"], sizeof(authToken.token_type));
     strlcpy(authToken.access_token, doc["access_token"], sizeof(authToken.access_token));
     strlcpy(authToken.refresh_token, doc["refresh_token"], sizeof(authToken.refresh_token));
-    strlcpy(string_reauthToken, authToken.refresh_token, sizeof(authToken.refresh_token));
-    // iotWebConf.saveConfig();
+
+    getLocalTime(&timeinfo);
+    if (mktime(&timeinfo) >= authToken.refresh_token_lastSave + 2592000)
+    {
+        strlcpy(string_refreshToken, authToken.refresh_token, sizeof(authToken.refresh_token));
+
+        getLocalTime(&timeinfo);
+        ultoa(mktime(&timeinfo), string_refreshToken_lastSave, 10);
+        iotWebConf.saveConfig();
+        Serial.printf("   --> New Refresh Token saved!\n\n", httpResponseCode);
+    }
 
     http.end();
 
@@ -184,7 +198,7 @@ void graph_checkAuthToken(void *parameter)
     {
         while (iotWebConf.getState() != 4)
         {
-            delay(1000);
+            delay(5000);
         }
 
         xSemaphoreTake(sem, portMAX_DELAY);
@@ -203,7 +217,7 @@ void graph_pollTeamsChannel(void *parameter)
     {
         while (iotWebConf.getState() != 4)
         {
-            delay(1000);
+            delay(5000);
         }
 
         xSemaphoreTake(sem, portMAX_DELAY);
@@ -365,7 +379,7 @@ void graph_deserializeShifts()
     configTime(0, 0, "pool.ntp.org");
     for (JsonObject value : doc["value"].as<JsonArray>())
     {
-        if (strcmp(value["userId"].as<const char *>(), shift.userId) == 0 && strcmp(value["id"].as<const char *>(), shift.id) != 0)
+        if (strcmp(value["userId"].as<const char *>(), string_teams_UserID) == 0 && strcmp(value["id"].as<const char *>(), shift.id) != 0)
         {
             tm tm_startDateTime;
             tm tm_endDateTime;

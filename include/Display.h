@@ -20,4 +20,6 @@ void display_pollTimer();
 void display_getAuthToken();
 void display_teamsMessage();
 void display_drawPollTimers();
+void display_drawUptime();
+
 #endif

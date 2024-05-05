@@ -96,6 +96,24 @@ void setup()
   sem = xSemaphoreCreateBinary(); // Create binary semaphore
   xSemaphoreGive(sem);
 
+  // Start NTP polling
+  if (xTaskCreatePinnedToCore(
+          time_update, // Function name of the task
+          "PollNtp",   // Name of the task (e.g. for debugging)
+          2048,        // Stack size (bytes)
+          NULL,        // Parameter to pass
+          1,           // Task priority
+          &PollNtp,    // Task handle
+          1            // Run on Core 1
+          ))
+  {
+    Serial.println("NTP polling startet successfully!");
+  }
+  else
+  {
+    Serial.println("Error starting NTP polling!");
+  }
+
   // Start task for Auth Token refresh
   if (xTaskCreatePinnedToCore(
           graph_checkAuthToken, // Function name of the task
@@ -107,11 +125,11 @@ void setup()
           1                     // Run on Core 1
           ))
   {
-    Serial.printf("Refresh task for Auth Token started!\n\n");
+    Serial.printf("Token refresh Task started successfully!\n");
   }
   else
   {
-    Serial.printf("Error starting refres task for Auth Token!\n\n");
+    Serial.printf("Error starting Token refresh Task!\n");
   }
 
   // Start Teams polling
@@ -136,7 +154,7 @@ void setup()
   if (xTaskCreatePinnedToCore(
           graph_pollShifts, // Function name of the task
           "PollShifts",     // Name of the task (e.g. for debugging)
-          4096,             // Stack size (bytes)
+          8192,             // Stack size (bytes)
           NULL,             // Parameter to pass
           1,                // Task priority
           &PollShifts,      // Task handle
@@ -150,25 +168,7 @@ void setup()
     Serial.println("Error starting Shifts polling!");
   }
 
-  // Start NTP polling
-  if (xTaskCreatePinnedToCore(
-          time_update, // Function name of the task
-          "PollNtp",   // Name of the task (e.g. for debugging)
-          2048,        // Stack size (bytes)
-          NULL,        // Parameter to pass
-          1,           // Task priority
-          &PollNtp,    // Task handle
-          1            // Run on Core 1
-          ))
-  {
-    Serial.println("NTP polling startet successfully!");
-  }
-  else
-  {
-    Serial.println("Error starting NTP polling!");
-  }
-
-  // Configure Timer0 Interrupt
+    // Configure Timer0 Interrupt
   Timer0_Cfg = timerBegin(0, 80, true);
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
   timerAlarmWrite(Timer0_Cfg, 20, true);
@@ -184,10 +184,8 @@ void loop()
   // Run every 1 Seconds
   if (millis() - old_timer_1_seconds >= TIMER_1_SECONDS)
   {
-    multi_heap_info_t info;
-    heap_caps_get_info(&info, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    Serial.printf("   --> Total Free: %i Byte\n", info.total_free_bytes);
     display_drawPollTimers();
+    display_drawUptime();
     old_timer_1_seconds = millis();
   }
 

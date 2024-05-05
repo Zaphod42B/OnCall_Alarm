@@ -26,6 +26,7 @@ typedef struct
   int expires_in = 0;
   char access_token[4096];
   char refresh_token[2048];
+  time_t refresh_token_lastSave;
 } AuthToken;
 
 typedef struct
@@ -41,7 +42,6 @@ typedef struct
 {
   u_long lastPoll = 0;
   char id[64];
-  char userId[64] = "543e9206-a5ff-4c1e-85fc-744b0ce5c82b";
   time_t t_startDateTime;
   time_t t_endDateTime;
 } Shift;
