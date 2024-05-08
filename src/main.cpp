@@ -271,7 +271,14 @@ void loop()
     if (new_message)
     {
       display_teamsMessage();
+      if (teamsMsg.fistMsgReceived && config.is_Armed)
+      {
+        config.is_Alarm = true;
+        config.display_brightness = 10;
+        brightness_change = true;
+      }
       new_message = false;
+      teamsMsg.fistMsgReceived = true;
     }
     break;
 

@@ -67,7 +67,6 @@ void alarm_audio(void *parameter)
 {
     while (true)
     {
-        xSemaphoreTake(sem, portMAX_DELAY);
         while (config.is_Alarm)
         {
             dac_output_enable(DAC_CHANNEL_2);
@@ -75,7 +74,6 @@ void alarm_audio(void *parameter)
             dac_output_disable(DAC_CHANNEL_2);
             delay(500);
         }
-        xSemaphoreGive(sem);
         delay(1000);
     }
 }

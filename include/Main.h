@@ -33,6 +33,7 @@ typedef struct
 typedef struct
 {
   u_long lastPoll = 0;
+  bool fistMsgReceived = false;
   unsigned long long Id = 0;
   char subject[128];
   char body[512];

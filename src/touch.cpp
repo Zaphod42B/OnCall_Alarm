@@ -49,6 +49,13 @@ void touch_newPoint()
             Serial.println("Touch detected");
             Serial.printf("   --> x = %i | y = %i | pressure: %i\n\n", touch_x, touch_y, p.z);
 
+            if (config.is_Alarm)
+            {
+                config.is_Alarm = false;
+                is_touched = true;
+                return;
+            }
+
             if (config.display_brightness == 0)
             {
                 config.display_brightness++;

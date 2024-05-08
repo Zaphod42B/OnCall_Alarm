@@ -239,7 +239,6 @@ void graph_pollTeamsChannel(void *parameter)
         else
         {
             Serial.printf("[Done]\n   --> HTTP-Response: %i\n", httpResponseCode);
-            teamsMsg.lastPoll = millis();
             graph_deserializeTeamsMsg();
             http.end();
             if (new_message)
@@ -249,14 +248,11 @@ void graph_pollTeamsChannel(void *parameter)
                 Serial.printf("      --> [Created]: %s\n", teamsMsg.createdDateTime);
                 Serial.printf("      --> [Subject]: %s\n\n", teamsMsg.subject);
             }
-            else if (new_message && teamsMsg.lastPoll != 0)
-            {
-                config.is_Alarm = true;
-            }
             else
             {
                 Serial.printf("   --> No new Message.\n\n");
             }
+            teamsMsg.lastPoll = millis();
         }
 
         xSemaphoreGive(sem);
