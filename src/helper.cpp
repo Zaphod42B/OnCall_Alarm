@@ -4,11 +4,13 @@
 #include "Extern.h"
 #include "WebConf.h"
 
+#include <driver/dac.h>
+
 // ##################################
 // ### Time #########################
 // ##################################
 
-#define NTP_POLLING_INTERVAL 300000 + rand() % 10000
+#define NTP_POLLING_INTERVAL atoi(string_poll_TimerNtp) * 1000 + rand() % 10000
 
 char *tzbuf_value;
 
@@ -59,4 +61,21 @@ void time_prepareTimeZone()
 void time_setTimezone()
 {
     strcpy(tzbuf_value, "CET-1CEST,M3.5.0,M10.5.0/3");
+}
+
+void alarm_audio(void *parameter)
+{
+    while (true)
+    {
+        xSemaphoreTake(sem, portMAX_DELAY);
+        while (config.is_Alarm)
+        {
+            dac_output_enable(DAC_CHANNEL_2);
+            delay(500);
+            dac_output_disable(DAC_CHANNEL_2);
+            delay(500);
+        }
+        xSemaphoreGive(sem);
+        delay(1000);
+    }
 }

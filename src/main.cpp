@@ -40,12 +40,10 @@ TaskHandle_t PollNtp;
 TaskHandle_t CheckAuthToken;
 TaskHandle_t PollTeamsChannel;
 TaskHandle_t PollShifts;
+TaskHandle_t AlarmAudio;
 
 // Create timeinfo handle
 tm timeinfo;
-
-// Initialize Audio
-// Audio audio(true, I2S_DAC_CHANNEL_LEFT_EN);
 
 // Timer0 Configuration Pointer (Handle)
 hw_timer_t *Timer0_Cfg = NULL;
@@ -168,11 +166,29 @@ void setup()
     Serial.println("Error starting Shifts polling!");
   }
 
-    // Configure Timer0 Interrupt
+  // Configure Timer0 Interrupt
   Timer0_Cfg = timerBegin(0, 80, true);
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
   timerAlarmWrite(Timer0_Cfg, 20, true);
   timerAlarmEnable(Timer0_Cfg);
+
+  // Start Alarm Audio
+  if (xTaskCreatePinnedToCore(
+          alarm_audio,  // Function name of the task
+          "AlarmAudio", // Name of the task (e.g. for debugging)
+          1024,         // Stack size (bytes)
+          NULL,         // Parameter to pass
+          1,            // Task priority
+          &AlarmAudio,  // Task handle
+          1             // Run on Core 1
+          ))
+  {
+    Serial.println("Alarm Audio startet successfully!");
+  }
+  else
+  {
+    Serial.println("Error starting Alarm Audio!");
+  }
 }
 
 void loop()
@@ -218,7 +234,8 @@ void loop()
     Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollNtp), uxTaskGetStackHighWaterMark(PollNtp));
     Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(CheckAuthToken), uxTaskGetStackHighWaterMark(CheckAuthToken));
     Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollTeamsChannel), uxTaskGetStackHighWaterMark(PollTeamsChannel));
-    Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(PollShifts), uxTaskGetStackHighWaterMark(PollShifts));
+    Serial.printf("   --> %s: %i Byte\n", pcTaskGetTaskName(PollShifts), uxTaskGetStackHighWaterMark(PollShifts));
+    Serial.printf("   --> %s: %i Byte\n\n", pcTaskGetTaskName(AlarmAudio), uxTaskGetStackHighWaterMark(AlarmAudio));
     old_timer_60_seconds = millis();
   }
 

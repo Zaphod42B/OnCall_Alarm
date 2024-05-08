@@ -223,12 +223,12 @@ void display_teamsMessage()
     sprite.deleteSprite();
 
     sprite.setColorDepth(8);
-    sprite.createSprite(285, 105);
+    sprite.createSprite(285, 120);
     sprite.fillSprite(TFT_BLACK);
     sprite.setTextColor(TFT_WHITE);
     sprite.setTextDatum(TL_DATUM);
     sprite.setTextFont(2);
-    sprite.setTextWrap(true, true);
+    sprite.setTextWrap(true, false);
 
     sprite.setCursor(0, 5);
     sprite.println(teamsMsg.body);
@@ -256,7 +256,7 @@ void display_drawPollTimers()
     }
     sprite.printf(" Token: %i\n", ((authToken.token_request_millis / 1000 + authToken.expires_in) - millis() / 1000));
 
-    if ((millis() - teamsMsg.lastPoll) / 1000 <= 20)
+    if ((millis() - teamsMsg.lastPoll) / 1000 <= 60)
     {
         sprite.setTextColor(TFT_GREEN);
     }
@@ -265,7 +265,7 @@ void display_drawPollTimers()
         sprite.setTextColor(TFT_RED);
     }
 
-    if ((millis() - shift.lastPoll) / 1000 <= 20)
+    if ((millis() - shift.lastPoll) / 1000 <= 60)
     {
         sprite.setTextColor(TFT_GREEN);
     }

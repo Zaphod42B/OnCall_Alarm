@@ -18,9 +18,9 @@ extern char string_teams_TeamID[STRING_LEN];
 extern char string_teams_ChannelID[STRING_LEN];
 extern char string_teams_UserID[STRING_LEN];
 
-extern char string_poll_TimerTeamsMsg[3];
-extern char string_poll_TimerShifts[3];
-extern char string_poll_TimerNtp[3];
+extern char string_poll_TimerTeamsMsg[4];
+extern char string_poll_TimerShifts[4];
+extern char string_poll_TimerNtp[4];
 
 extern char string_refreshToken[2048];
 extern char string_refreshToken_lastSave[32];

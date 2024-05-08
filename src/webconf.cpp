@@ -9,7 +9,7 @@ const char thingName[] = "OnCallAlarm";
 const char wifiInitialApPassword[] = "Alarm123!";
 
 // -- Configuration specific key. The value should be modified if config structure was changed.
-#define CONFIG_VERSION "1.3"
+#define CONFIG_VERSION "1.4"
 
 DNSServer dnsServer;
 WebServer server(80);
@@ -20,9 +20,9 @@ char string_teams_TeamID[STRING_LEN];
 char string_teams_ChannelID[STRING_LEN];
 char string_teams_UserID[STRING_LEN];
 
-char string_poll_TimerTeamsMsg[3];
-char string_poll_TimerShifts[3];
-char string_poll_TimerNtp[3];
+char string_poll_TimerTeamsMsg[4];
+char string_poll_TimerShifts[4];
+char string_poll_TimerNtp[4];
 
 char string_refreshToken[2048];
 char string_refreshToken_lastSave[32];
@@ -37,9 +37,9 @@ IotWebConfTextParameter teams_ChannelID = IotWebConfTextParameter("Channel ID", 
 IotWebConfTextParameter teams_UserID = IotWebConfTextParameter("User ID", "iwcUserID", string_teams_UserID, STRING_LEN);
 
 IotWebConfParameterGroup poll_TimerGroup = IotWebConfParameterGroup("iwcPollTimer", "Poll Timer");
-IotWebConfNumberParameter poll_TimerTeamsMsg = IotWebConfNumberParameter("Teams Message", "iwcTeamsMsg", string_poll_TimerTeamsMsg, 3, "10", "1...999", "min='5' max='999' step='1'");
-IotWebConfNumberParameter poll_TimerShifts = IotWebConfNumberParameter("Shifts", "iwcShifts", string_poll_TimerShifts, 3, "10", "1...999", "min='5' max='999' step='1'");
-IotWebConfNumberParameter poll_TimerNtp = IotWebConfNumberParameter("NTP", "iwcNtp", string_poll_TimerNtp, 3, "10", "1...999", "min='5' max='999' step='1'");
+IotWebConfNumberParameter poll_TimerTeamsMsg = IotWebConfNumberParameter("Teams Message", "iwcTeamsMsg", string_poll_TimerTeamsMsg, 4, "10", "1...999", "min='5' max='999' step='1'");
+IotWebConfNumberParameter poll_TimerShifts = IotWebConfNumberParameter("Shifts", "iwcShifts", string_poll_TimerShifts, 4, "10", "1...999", "min='5' max='999' step='1'");
+IotWebConfNumberParameter poll_TimerNtp = IotWebConfNumberParameter("NTP", "iwcNtp", string_poll_TimerNtp, 4, "300", "1...999", "min='5' max='999' step='1'");
 
 IotWebConfPasswordParameter refreshToken = IotWebConfPasswordParameter("Reauth Token", "iwcReauthToken", string_refreshToken, 2048);
 IotWebConfNumberParameter refreshToken_lastSave = IotWebConfNumberParameter("Reauth Token Last Save", "iwcReauthTokenLastSave", string_refreshToken_lastSave, 32);
@@ -102,6 +102,17 @@ void webconf_handleRoot()
     s += string_teams_TeamID;
     s += "<li><b>Channel ID: </b>";
     s += string_teams_ChannelID;
+    s += "<li><b>User ID: </b>";
+    s += string_teams_UserID;
+    s += "</ul>";
+    s += "<h3>Poll Timer:</h3>";
+    s += "<ul>";
+    s += "<li><b>Temas Message: </b>";
+    s += string_poll_TimerTeamsMsg;
+    s += "<li><b>Shift: </b>";
+    s += string_poll_TimerShifts;
+    s += "<li><b>NTP: </b>";
+    s += string_poll_TimerNtp;
     s += "</ul>";
     s += "Go to <a href='config'>configure page</a> to change values.";
     s += "</body></html>\n";

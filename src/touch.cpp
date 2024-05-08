@@ -5,7 +5,6 @@
 #include "Free_Fonts.h"
 #include "Main.h"
 #include "Extern.h"
-#include <driver/dac.h>
 
 // Initialize Touch
 #define XPT2046_IRQ 36
@@ -85,9 +84,7 @@ void touch_newPoint()
             // Button "Menu"
             else if (touch_x >= 220 && touch_x <= 320 && touch_y >= 200 && touch_y <= 240)
             {
-                dac_output_enable(DAC_CHANNEL_2);
-                delay(1000);
-                dac_output_disable(DAC_CHANNEL_2);
+                config.is_Alarm ^= 1;
             }
             is_touched = true;
         }

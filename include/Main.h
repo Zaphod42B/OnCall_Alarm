@@ -6,6 +6,7 @@ typedef struct
 {
   int display_brightness = 10;
   int is_Armed = true;
+  int is_Alarm = false;
 } Config;
 
 typedef struct

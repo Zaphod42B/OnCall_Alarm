@@ -7,8 +7,8 @@
 #include "Display.h"
 #include "Helper.h"
 
-#define TEAMS_POLLING_INTERVALL 10000
-#define SHIFTS_POLLING_INTERVALL 10000
+#define TEAMS_POLLING_INTERVALL atoi(string_poll_TimerTeamsMsg) * 1000
+#define SHIFTS_POLLING_INTERVALL atoi(string_poll_TimerShifts) * 1000
 
 #define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.75) * 1000 //
 
@@ -249,6 +249,10 @@ void graph_pollTeamsChannel(void *parameter)
                 Serial.printf("      --> [Created]: %s\n", teamsMsg.createdDateTime);
                 Serial.printf("      --> [Subject]: %s\n\n", teamsMsg.subject);
             }
+            else if (new_message && teamsMsg.lastPoll != 0)
+            {
+                config.is_Alarm = true;
+            }
             else
             {
                 Serial.printf("   --> No new Message.\n\n");
@@ -288,6 +292,7 @@ void graph_deserializeTeamsMsg()
         std::string out;
         out = std::regex_replace(msgIndex["body"]["content"].as<std::string>(), tags, remove);
 
+        strlcpy(teamsMsg.body, out.c_str(), sizeof(teamsMsg.body));
         strlcpy(teamsMsg.body, out.c_str(), sizeof(teamsMsg.body));
         new_message = true;
     }
