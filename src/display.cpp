@@ -173,7 +173,7 @@ void display_drawTime()
     char time_string[6];
     char date_string[35];
     strftime(time_string, 6, "%H:%M", &timeinfo);
-    strftime(date_string, 255, "%d.%m.%Y", &timeinfo);
+    strftime(date_string, 35, "%d.%m.%Y", &timeinfo);
 
     tft.setTextFont(1);
     tft.drawString(date_string, 318, 4, 2);

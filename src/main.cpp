@@ -166,12 +166,6 @@ void setup()
     Serial.println("Error starting Shifts polling!");
   }
 
-  // Configure Timer0 Interrupt
-  Timer0_Cfg = timerBegin(0, 80, true);
-  timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
-  timerAlarmWrite(Timer0_Cfg, 20, true);
-  timerAlarmEnable(Timer0_Cfg);
-
   // Start Alarm Audio
   if (xTaskCreatePinnedToCore(
           alarm_audio,  // Function name of the task
@@ -189,6 +183,12 @@ void setup()
   {
     Serial.println("Error starting Alarm Audio!");
   }
+
+// Configure Timer0 Interrupt
+Timer0_Cfg = timerBegin(0, 80, true);
+timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
+timerAlarmWrite(Timer0_Cfg, 20, true);
+timerAlarmEnable(Timer0_Cfg);
 }
 
 void loop()
@@ -271,14 +271,14 @@ void loop()
     if (new_message)
     {
       display_teamsMessage();
-      if (teamsMsg.fistMsgReceived && config.is_Armed)
+      if (teamsMsg.firstMsgReceived && config.is_Armed)
       {
         config.is_Alarm = true;
         config.display_brightness = 10;
         brightness_change = true;
       }
       new_message = false;
-      teamsMsg.fistMsgReceived = true;
+      teamsMsg.firstMsgReceived = true;
     }
     break;
 

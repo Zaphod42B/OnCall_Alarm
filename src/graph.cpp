@@ -12,12 +12,14 @@
 
 #define TOKEN_MIN_LIFETIME (authToken.expires_in * 0.75) * 1000 //
 
-HTTPClient http;
+#define HTTP_RETRY_COUNT 5
 
 AuthToken authToken;
 TeamsMsg teamsMsg;
 DeviceAuth deviceAuth;
 Shift shift;
+
+HTTPClient http;
 
 String graphEndpoint;
 String httpRequestData;
@@ -27,12 +29,12 @@ char shifts_Start_Time[32];
 char shifts_End_Time[32];
 
 int httpResponseCode;
+bool httpRetry = false;
 
 void graph_loadReauthToken()
 {
     strlcpy(authToken.refresh_token, string_refreshToken, sizeof(string_refreshToken));
     authToken.refresh_token_lastSave = atoi(string_refreshToken_lastSave);
-    Serial.println(authToken.refresh_token_lastSave);
 }
 
 void graph_getAuthToken()
@@ -40,6 +42,7 @@ void graph_getAuthToken()
     graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/devicecode";
     httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope;
 
+    http.setReuse(false);
     http.begin(graphEndpoint);
     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
@@ -49,7 +52,7 @@ void graph_getAuthToken()
     if (httpResponseCode != 200)
     {
         Serial.printf("[ERROR]\n  -> HTTP-Response: %i\n\n", httpResponseCode);
-        Serial.println(http.getString());
+        graph_handleHttpError(http.getString());
         http.end();
         return;
     }
@@ -61,14 +64,13 @@ void graph_getAuthToken()
 
     // Parse JSON object
     DeserializationError error = deserializeJson(doc, http.getString());
+    http.end();
     if (error)
     {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
-        http.end();
         return;
     }
-    http.end();
 
     deviceAuth.token_request_millis = millis();
     deviceAuth.expires_in = doc["expires_in"];
@@ -88,6 +90,7 @@ void graph_getAuthToken()
         graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
         httpRequestData = "grant_type=urn:ietf:params:oauth:grant-type:device_code&client_id=" + String(string_teams_AppID) + "&device_code=" + String(deviceAuth.device_code);
 
+        http.setReuse(false);
         http.begin(graphEndpoint);
         http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
@@ -98,11 +101,11 @@ void graph_getAuthToken()
 
         // Parse JSON object
         DeserializationError error = deserializeJson(userAuth, http.getString());
+        http.end();
         if (error)
         {
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.f_str());
-            http.end();
             return;
         }
 
@@ -140,18 +143,34 @@ bool graph_reAuthToken()
     graphEndpoint = "https://login.microsoftonline.com/" + String(string_teams_TenantID) + "/oauth2/v2.0/token";
     httpRequestData = "client_id=" + String(string_teams_AppID) + "&scope=" + authToken.scope + "&refresh_token=" + authToken.refresh_token + "&grant_type=refresh_token";
 
-    http.begin(graphEndpoint);
-    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-    httpResponseCode = http.POST(httpRequestData);
-
-    Serial.print("Refreshing Auth Token... ");
-    if (httpResponseCode != 200)
+    httpRetry = true;
+    while (httpRetry)
     {
-        Serial.printf("[ERROR]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
-        Serial.println(http.getString());
-        http.end();
-        return false;
+        http.setReuse(false);
+        http.begin(graphEndpoint);
+        http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+        httpResponseCode = http.POST(httpRequestData);
+
+        Serial.print("Refreshing Auth Token... ");
+
+        int retryCount = 0;
+        if (httpResponseCode != 200)
+        {
+            Serial.printf("[ERROR]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
+            graph_handleHttpError(http.getString());
+            http.end();
+            
+            if(retryCount++ > HTTP_RETRY_COUNT)
+            {
+                return false;
+            }
+            delay(1000);
+        }
+        else
+        {
+            httpRetry = false;
+        }
     }
 
     Serial.printf("[Done]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
@@ -161,11 +180,12 @@ bool graph_reAuthToken()
 
     // Parse JSON object
     DeserializationError error = deserializeJson(doc, http.getString());
+    http.end();
+
     if (error)
     {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
-        http.end();
         return false;
     }
 
@@ -185,9 +205,6 @@ bool graph_reAuthToken()
         iotWebConf.saveConfig();
         Serial.printf("   --> New Refresh Token saved!\n\n", httpResponseCode);
     }
-
-    http.end();
-
     userAuthenticated = true;
     return true;
 }
@@ -224,6 +241,7 @@ void graph_pollTeamsChannel(void *parameter)
         graphEndpoint = "https://graph.microsoft.com/v1.0/teams/" + String(string_teams_TeamID) + "/channels/" + String(string_teams_ChannelID) + "/messages?top=1";
         httpHeader = "Bearer " + String(authToken.access_token);
 
+        http.setReuse(true);
         http.begin(graphEndpoint);
         http.addHeader("Authorization", httpHeader);
 
@@ -233,14 +251,15 @@ void graph_pollTeamsChannel(void *parameter)
         if (httpResponseCode != 200)
         {
             Serial.printf("[ERROR]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
-            Serial.println(http.getString());
+            graph_handleHttpError(http.getString());
             http.end();
         }
         else
         {
             Serial.printf("[Done]\n   --> HTTP-Response: %i\n", httpResponseCode);
-            graph_deserializeTeamsMsg();
+            graph_deserializeTeamsMsg(http.getString());
             http.end();
+
             if (new_message)
             {
                 Serial.printf("   --> New Message received:\n");
@@ -254,19 +273,18 @@ void graph_pollTeamsChannel(void *parameter)
             }
             teamsMsg.lastPoll = millis();
         }
-
         xSemaphoreGive(sem);
         delay(TEAMS_POLLING_INTERVALL);
     }
 }
 
-void graph_deserializeTeamsMsg()
+void graph_deserializeTeamsMsg(const String &payload)
 {
     // Allocate the JSON document
     JsonDocument msgArray;
 
     // Parse JSON object
-    DeserializationError error = deserializeJson(msgArray, http.getString());
+    DeserializationError error = deserializeJson(msgArray, payload);
     if (error)
     {
         Serial.print(F("deserializeJson() failed: "));
@@ -322,6 +340,7 @@ void graph_pollShifts(void *parameter)
         graphEndpoint = "https://graph.microsoft.com/v1.0/teams/" + String(string_teams_TeamID) + "/schedule/shifts?$filter=sharedShift/startDateTime%20ge%20" + shifts_Start_Time + "%20and%20sharedShift/endDateTime%20le%20" + shifts_End_Time;
         httpHeader = "Bearer " + String(authToken.access_token);
 
+        http.setReuse(false);
         http.begin(graphEndpoint);
         http.addHeader("Authorization", httpHeader);
 
@@ -331,15 +350,16 @@ void graph_pollShifts(void *parameter)
         if (httpResponseCode != 200)
         {
             Serial.printf("[ERROR]\n   --> HTTP-Response: %i\n\n", httpResponseCode);
-            Serial.println(http.getString());
+            graph_handleHttpError(http.getString());
             http.end();
         }
         else
         {
             Serial.printf("[Done]\n   --> HTTP-Response: %i\n", httpResponseCode);
             shift.lastPoll = millis();
-            graph_deserializeShifts();
+            graph_deserializeShifts(http.getString());
             http.end();
+
             if (config.is_Armed)
             {
                 Serial.printf("   --> Active Shift\n");
@@ -362,13 +382,13 @@ void graph_pollShifts(void *parameter)
     }
 }
 
-void graph_deserializeShifts()
+void graph_deserializeShifts(const String &payload)
 {
     // Allocate the JSON document
     JsonDocument doc;
 
     // Parse JSON object
-    DeserializationError error = deserializeJson(doc, http.getString());
+    DeserializationError error = deserializeJson(doc, payload);
     if (error)
     {
         Serial.print(F("deserializeJson() failed: "));
@@ -406,4 +426,9 @@ void graph_deserializeShifts()
     time_setTimezone();
     config.is_Armed = state;
     button_change = true;
+}
+
+void graph_handleHttpError(const String &payload)
+{
+    Serial.println(payload);
 }
