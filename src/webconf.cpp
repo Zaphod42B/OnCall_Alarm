@@ -2,6 +2,15 @@
 
 #include "WebConf.h"
 
+// -- When CONFIG_PIN is pulled to ground on startup, the Thing will use the initial
+//      password to build an AP. (E.g. in case of lost password)
+#define CONFIG_PIN 0
+
+// -- Status indicator pin.
+//      First it will light up (kept LOW), on Wifi connection it will blink,
+//      when connected to the Wifi it will turn off (kept HIGH).
+#define STATUS_PIN 4
+
 // -- Initial name of the Thing. Used e.g. as SSID of the own Access Point.
 const char thingName[] = "OnCallAlarm";
 
@@ -63,6 +72,9 @@ void webconf_init()
 
     iotWebConf.setConfigSavedCallback(&webconf_configSaved);
     iotWebConf.getApTimeoutParameter()->visible = true;
+
+    iotWebConf.setStatusPin(STATUS_PIN);
+    iotWebConf.setConfigPin(CONFIG_PIN);
 
     iotWebConf.init();
     iotWebConf.setApTimeoutMs(0);

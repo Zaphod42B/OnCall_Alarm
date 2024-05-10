@@ -4,7 +4,6 @@
 #include <IotWebConf.h>
 #include <IotWebConfUsing.h>
 
-#define CONFIG_PIN GPIO_NUM_0 //Button Config Recovery
 #define STRING_LEN 64
 
 extern DNSServer dnsServer;
