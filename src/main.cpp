@@ -24,7 +24,7 @@ int page = 0;
 u_long old_timer_1_seconds = TIMER_1_SECONDS;
 
 #define TIMER_DRAW_WIFI 5000
-u_long oldTime_display_drawWiFi = TIMER_DRAW_WIFI; // Time between WiFi and Time refresh in display in ms
+u_long oldTime_display_drawWiFi = TIMER_DRAW_WIFI; // Time between WiFi and Time refresh on display in ms
 
 #define TIMER_60_SECONDS 60000
 u_long old_timer_60_seconds = TIMER_60_SECONDS;
@@ -242,6 +242,10 @@ void loop()
   // Run every 5 Minutes
   if (millis() - old_timer_5_minutes >= TIMER_5_MINUTES)
   {
+    if((millis() - teamsMsg.lastPoll) / 1000 >= 300 || (millis() - shift.lastPoll) / 1000 >= 300)
+    {
+      ESP.restart();
+    }
     old_timer_5_minutes = millis();
   }
 
